@@ -1,6 +1,6 @@
 # islectl CLI
 
-🚧 PoC concept currently under construction. This repo may be deleted at any time.
+🚧 PoC currently under construction/consideration. This repo may be deleted at any time.
 
 Command line utility to interact with your local and remote ISLE installs.
 
