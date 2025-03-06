@@ -43,4 +43,4 @@ brews:
       email: community@islandora.ca
     repository:
       owner: islandora-devops
-      name: homebrew-islandora
+      name: homebrew-tap

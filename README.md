@@ -11,8 +11,8 @@ Command line utility to interact with your local and remote ISLE installs.
 You can install `islectl` using homebrew
 
 ```
-brew tap islandora-devops/islandora
-brew install islandora-devops/islandora/islectl
+brew tap islandora-devops/tap
+brew install islandora-devops/tap/islectl
 ```
 
 ### Download Binary
