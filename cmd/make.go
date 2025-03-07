@@ -4,11 +4,10 @@ Copyright © 2025 Islandora Foundation
 package cmd
 
 import (
-	"log/slog"
-	"os"
 	"os/exec"
 
 	"github.com/islandora-devops/islectl/internal/utils"
+	"github.com/islandora-devops/islectl/pkg/isle"
 	"github.com/spf13/cobra"
 )
 
@@ -18,15 +17,17 @@ var makeCmd = &cobra.Command{
 	Short: "Run custom make commands",
 	Args:  cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		dir, profile, err := utils.GetRootFlags(cmd)
+		bc, err := isle.NewBuildkitCommand(cmd)
 		if err != nil {
-			slog.Error("Error getting root flags", "dir", dir, "profile", profile, "err", err)
-			os.Exit(1)
+			utils.ExitOnError(err)
 		}
 
 		c := exec.Command("make", args...)
-		c.Dir = dir
-		utils.RunCommand(c)
+		c.Dir = bc.WorkingDirectory
+		err = utils.RunCommand(c)
+		if err != nil {
+			utils.ExitOnError(err)
+		}
 	},
 }
 

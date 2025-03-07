@@ -34,13 +34,16 @@ Available Commands:
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
   make        Run custom make commands
+  sequelace   Connect to your ISLE database using Sequel Ace (Mac OS only)
   up          Brings up the containers or builds starter if no containers were found.
 
 Flags:
-  -d, --dir string       path to isle-site-template for your site. Defaults to current directory. (default "islectl")
-  -h, --help             help for islectl
-  -p, --profile string   isle-site-template profile (default "dev")
-  -v, --version          version for islectl
+      --compose-project string   Docker compose project name (default "isle-site-template")
+  -d, --dir string               path to isle-site-template for your site. Defaults to current directory. (default "/tmp/isle-site-template")
+  -h, --help                     help for islectl
+  -p, --profile string           docker compose profile (dev or prod) (default "dev")
+  -s, --site string              The name of the site, in reference to isle-buildkit's drupal multisite support. (default "default")
+  -v, --version                  version for islectl
 
 Use "islectl [command] --help" for more information about a command.
 ```
@@ -69,6 +72,12 @@ islectl make up --dir /path/to/islandora-devops/isle-dc
 ```
 
 This `islectl make` command could also support any custom make commands that are not able to be implemented in this CLI. Would require the given make command to be compatible with the given docker compose project.
+
+### sequelace
+
+Open Sequel Ace and connect to your ISLE database (Mac OS only)
+
+![sequelace command screencast](./docs/assets/img/sequelace.gif)
 
 ## Updating
 

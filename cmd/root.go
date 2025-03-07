@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,12 @@ func init() {
 	if err != nil {
 		log.Println(err)
 	}
+	env := filepath.Join(path, ".env")
+	_ = godotenv.Load(env)
 
-	rootCmd.PersistentFlags().StringP("profile", "p", "dev", "isle-site-template profile")
-	rootCmd.PersistentFlags().StringP("dir", "d", filepath.Base(path), "path to isle-site-template for your site. Defaults to current directory.")
+	rootCmd.PersistentFlags().StringP("profile", "p", "dev", "docker compose profile (dev or prod)")
+	rootCmd.PersistentFlags().StringP("dir", "d", path, "path to isle-site-template for your site. Defaults to current directory.")
+	rootCmd.PersistentFlags().String("compose-project", os.Getenv("COMPOSE_PROJECT_NAME"), "Docker compose project name")
+	rootCmd.PersistentFlags().StringP("site", "s", "default", "The name of the site, in reference to isle-buildkit's drupal multisite support.")
+
 }
