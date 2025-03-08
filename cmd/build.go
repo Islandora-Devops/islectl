@@ -30,7 +30,7 @@ var buildCmd = &cobra.Command{
 		for _, env := range context.EnvFile {
 			cmdArgs = append(cmdArgs, "--env-file", env)
 		}
-		cmdArgs = append(cmdArgs, "build", "--pull")
+		cmdArgs = append(cmdArgs, "build", "--pull", "--quiet")
 		c := exec.Command("docker", cmdArgs...)
 		c.Dir = context.ProjectDir
 		err = context.RunCommand(c)
