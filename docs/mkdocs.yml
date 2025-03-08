@@ -1,0 +1,21 @@
+site_name: islectl
+site_url: https://islandora-devops.github.io/islectl/
+
+repo_url: https://github.com/islandora-devops/islectl
+edit_uri: 'edit/main/docs/'
+
+theme: material
+plugins:
+  - search
+  - social
+  - tags
+  - mermaid2
+
+nav:
+  - Home: index.md
+  - Getting Started: install.md
+  - Commands: commands.md
+extra_css:
+    - assets/css/extra.css
+extra_javascript:
+    - assets/js/extra.js

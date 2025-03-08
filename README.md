@@ -4,104 +4,13 @@
 
 Command line utility to interact with your local and remote ISLE installs.
 
-## Install
+Documentation is available at https://islandora-devops.github.io/islectl/
 
-### Homebrew
+## Attribution
 
-You can install `islectl` using homebrew
-
-```
-brew tap islandora-devops/tap
-brew install islandora-devops/tap/islectl
-```
-
-### Download Binary
-
-Instead of homebrew, you can download a binary for your system from [the latest release](https://github.com/islandora-devops/islectl/releases/latest)
-
-Then put the binary in a directory that is in your `$PATH`
-
-## Usage
-
-```
-$ islectl --help
-Interact with your ISLE site
-
-Usage:
-  islectl [command]
-
-Available Commands:
-  completion  Generate the autocompletion script for the specified shell
-  config      Manage ISLE command configuration
-  help        Help about any command
-  make        Run custom make commands
-  pull        Fetches the latest images from the registry.
-  sequelace   Connect to your ISLE database using Sequel Ace (Mac OS only)
-  up          Brings up the containers or builds starter if no containers were found.
-
-Flags:
-  -c, --context string   The ISLE context to use. See islectl config --help for more info (default "dev")
-  -h, --help             help for islectl
-  -s, --site string      The name of the site. If yr not using multi-site don't worry about this. (default "default")
-  -v, --version          version for islectl
-
-Use "islectl [command] --help" for more information about a command.
-```
-
-### up
-
-Install or bring online an isle-site-template project
-
-```
-cd /path/to/islandora-devops/isle-site-template
-islectl up
-```
-
-or
-
-```
-islectl up --dir /path/to/islandora-devops/isle-site-template
-```
-
-### make
-
-Until all the isle-dc command have been migrated into this CLI, the current isle-dc make commands can be ran like so
-
-```
-islectl make up --dir /path/to/islandora-devops/isle-dc 
-```
-
-This `islectl make` command could also support any custom make commands that are not able to be implemented in this CLI. Would require the given make command to be compatible with the given docker compose project.
-
-### sequelace
-
-Open Sequel Ace and connect to your ISLE database (Mac OS only)
-
-![sequelace command screencast](./docs/assets/img/sequelace.gif)
-
-## Updating
-
-### Homebrew
-
-If homebrew was used, you can simply upgrade the homebrew formulae for islectl
-
-```
-brew update && brew upgrade islectl
-```
-
-### Download Binary
-
-If the binary was downloaded and added to the `$PATH` updating islectl could look as follows. Requires [gh](https://cli.github.com/manual/installation) and `tar`
-
-```
-# update for your architecture
-ARCH="islectl_Linux_x86_64.tar.gz"
-TAG=$(gh release list --exclude-pre-releases --exclude-drafts --limit 1 --repo islandora-devops/islectl | awk '{print $3}')
-gh release download $TAG --repo islandora-devops/islectl --pattern $ARCH
-tar -zxvf $ARCH
-mv islectl /directory/in/path/binary/was/placed
-rm $ARCH
-```
+- The `config` commands for setting contexts were heavily inspired by `kubectl`
+- `ddev` was also an inspiration for this tool, with the added goal/feature of also managing production installations as well as local, development environments for ISLE repositories.
+- This tool is meant to be a CLI equivalent of the `make` commands provided by [isle-dc](https://github.com/islandora-devops/isle-dc), but instead to be ran against [isle-site-template](https://github.com/islandora-devops/isle-site-template)
 
 ## TODO
 

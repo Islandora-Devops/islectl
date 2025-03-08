@@ -35,6 +35,5 @@ func init() {
 		slog.Error("Unable to fetch current context", "err", err)
 	}
 
-	rootCmd.PersistentFlags().StringP("site", "s", "default", "The name of the site. If yr not using multi-site don't worry about this.")
 	rootCmd.PersistentFlags().StringP("context", "c", c, "The ISLE context to use. See islectl config --help for more info")
 }

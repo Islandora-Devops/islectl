@@ -19,12 +19,18 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage ISLE command configuration",
-	Long: `An ISLE config can have multiple contexts.
-A context is an ISLE docker compose project running somewhere. Somewhere could be:
+	Long: `
+An islectl config can have multiple contexts.
+
+An islectl context is an ISLE docker compose project running somewhere. "Somewhere" meaning:
+
 - on your laptop (--type local)
 - on a remote server (--type remote).
 
-It's assummed where you're running islectl from has SSH access to where that context is running. i.e. on a remote server, your local machine has an ssh key that is tied to a user on the remote server`,
+Remote contexts require SSH access to the remote server from where islectl is being ran from.
+When creating a context the remote server DNS name, SSH port, SSH username, and your SSH private key will need to be set in the context configuration.
+
+You can have a default context which will be used when running islectl commands, unless the context is overridden with the --context flag.`,
 }
 
 var viewConfigCmd = &cobra.Command{
