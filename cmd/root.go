@@ -5,11 +5,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
-	"path/filepath"
 
-	"github.com/joho/godotenv"
+	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -31,16 +30,11 @@ func SetVersionInfo(version, commit, date string) {
 }
 
 func init() {
-	path, err := os.Getwd()
+	c, err := config.Current()
 	if err != nil {
-		log.Println(err)
+		slog.Error("Unable to fetch current context", "err", err)
 	}
-	env := filepath.Join(path, ".env")
-	_ = godotenv.Load(env)
 
-	rootCmd.PersistentFlags().StringP("profile", "p", "dev", "docker compose profile (dev or prod)")
-	rootCmd.PersistentFlags().StringP("dir", "d", path, "path to isle-site-template for your site. Defaults to current directory.")
-	rootCmd.PersistentFlags().String("compose-project", os.Getenv("COMPOSE_PROJECT_NAME"), "Docker compose project name")
-	rootCmd.PersistentFlags().StringP("site", "s", "default", "The name of the site, in reference to isle-buildkit's drupal multisite support.")
-
+	rootCmd.PersistentFlags().StringP("site", "s", "default", "The name of the site. If yr not using multi-site don't worry about this.")
+	rootCmd.PersistentFlags().StringP("context", "c", c, "The ISLE context to use. See islectl config --help for more info")
 }

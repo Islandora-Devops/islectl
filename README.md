@@ -125,3 +125,7 @@ rm $ARCH
 - [ ] Implement `make fix_views` This fixes a know issues with views when using the make local build. The error must be triggered before this will work.
 - [ ] Implement `make xdebug` Turn on xdebug.
 - [ ] Implement `make set-timeout` Update all PHP and NGinx timeouts to TIMEOUT_VALUE
+- [ ] Support changing the docker compose project name
+- [ ] Support configuring multiple isle-site-template contexts running locally
+- [ ] Support moving from a docker volume to bind mount
+- [ ] Support overridding conf

@@ -3,35 +3,75 @@ package isle
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/client"
+	"github.com/islandora-devops/islectl/pkg/config"
+	"golang.org/x/crypto/ssh"
 )
 
-func GetDockerCli() *client.Client {
-	// handle mac docker host issues
-	host := os.Getenv("DOCKER_HOST")
-	if host == "" {
-		host = "unix:///var/run/docker.sock"
-		macSocketPath := filepath.Join(os.Getenv("HOME"), ".docker/run/docker.sock")
-		if _, err := os.Stat(macSocketPath); err == nil {
-			host = "unix://" + macSocketPath
+type DockerClient struct {
+	CLI     *client.Client
+	sshConn *ssh.Client
+}
+
+func (d *DockerClient) Close() error {
+	if d.sshConn != nil {
+		return d.sshConn.Close()
+	}
+	return nil
+}
+
+// GetDockerCli returns a DockerClient wrapper.
+// If the context is remote, it creates an SSH tunnel; otherwise, it uses the local Docker socket.
+func GetDockerCli(activeCtx *config.Context) *DockerClient {
+	if activeCtx.DockerHostType == config.ContextLocal {
+		cli, err := client.NewClientWithOpts(
+			client.WithHost("unix://"+activeCtx.DockerSocket),
+			client.WithAPIVersionNegotiation(),
+		)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating local Docker client: %v\n", err)
+			os.Exit(1)
 		}
+		return &DockerClient{CLI: cli}
 	}
 
-	cli, err := client.NewClientWithOpts(client.WithHost(host), client.WithAPIVersionNegotiation())
+	sshConn, err := activeCtx.DialSSH()
 	if err != nil {
-		slog.Error("Unable to initialize docker client", "err", err)
+		fmt.Fprintf(os.Stderr, "Error establishing SSH connection: %v\n", err)
 		os.Exit(1)
 	}
 
-	return cli
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return sshConn.Dial("unix", activeCtx.DockerSocket)
+		},
+	}
+	httpClient := &http.Client{
+		Transport: transport,
+	}
+	cli, err := client.NewClientWithOpts(
+		client.WithHost("http://docker"),
+		client.WithHTTPClient(httpClient),
+		client.WithAPIVersionNegotiation(),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating Docker client over SSH: %v\n", err)
+		os.Exit(1)
+	}
+
+	return &DockerClient{
+		CLI:     cli,
+		sshConn: sshConn,
+	}
 }
 
-func GetSecret(ctx context.Context, cli *client.Client, dir, containerName, secret string) (string, error) {
+func GetSecret(ctx context.Context, cli *client.Client, c *config.Context, containerName, secret string) (string, error) {
 	containerJSON, err := cli.ContainerInspect(ctx, containerName)
 	if err != nil {
 		return "", err
@@ -40,8 +80,8 @@ func GetSecret(ctx context.Context, cli *client.Client, dir, containerName, secr
 	expectedTarget := fmt.Sprintf("/run/secrets/%s", secret)
 	for _, mount := range containerJSON.HostConfig.Mounts {
 		if mount.Target == expectedTarget {
-			secret := filepath.Join(dir, "secrets", secret)
-			return readSmallFile(secret), nil
+			secret := filepath.Join(c.ProjectDir, "secrets", secret)
+			return c.ReadSmallFile(secret), nil
 		}
 	}
 
@@ -62,14 +102,4 @@ func GetConfigEnv(ctx context.Context, cli *client.Client, containerName, envNam
 	}
 
 	return "", nil
-}
-
-func readSmallFile(filename string) string {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		slog.Error("Error reading file", "file", filename, "err", err)
-		return ""
-	}
-
-	return string(data)
 }

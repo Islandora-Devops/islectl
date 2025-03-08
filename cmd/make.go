@@ -7,7 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/islandora-devops/islectl/internal/utils"
-	"github.com/islandora-devops/islectl/pkg/isle"
+	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -17,14 +17,15 @@ var makeCmd = &cobra.Command{
 	Short: "Run custom make commands",
 	Args:  cobra.ArbitraryArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		bc, err := isle.NewBuildkitCommand(cmd)
+		f := cmd.Flags()
+		context, err := config.CurrentContext(f)
 		if err != nil {
 			utils.ExitOnError(err)
 		}
 
 		c := exec.Command("make", args...)
-		c.Dir = bc.WorkingDirectory
-		err = utils.RunCommand(c)
+		c.Dir = context.ProjectDir
+		err = context.RunCommand(c)
 		if err != nil {
 			utils.ExitOnError(err)
 		}

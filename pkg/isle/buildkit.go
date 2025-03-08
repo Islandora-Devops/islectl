@@ -12,72 +12,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joho/godotenv"
-	"github.com/spf13/cobra"
+	"github.com/islandora-devops/islectl/pkg/config"
 )
 
-type BuildkitCompose struct {
-	WorkingDirectory    string
-	ComposeProfile      string
-	ComposeProject      string
-	DrupalMultisiteName string
-	MySqlUri            string
-	SshInfo             string
-}
+func GetUris(c *config.Context) (string, string, error) {
+	cli := GetDockerCli(c)
 
-func NewBuildkitCommand(cmd *cobra.Command) (*BuildkitCompose, error) {
-	dir, err := cmd.Root().PersistentFlags().GetString("dir")
-	if err != nil {
-		return nil, fmt.Errorf("error getting --dir (%s): %v", dir, err)
-	}
-	profile, err := cmd.Root().PersistentFlags().GetString("profile")
-	if err != nil {
-		return nil, fmt.Errorf("error getting --profile (%s): %v", profile, err)
-	}
-
-	site, err := cmd.Root().PersistentFlags().GetString("site")
-	if err != nil {
-		return nil, fmt.Errorf("error getting --site (%s): %v", site, err)
-	}
-
-	project, err := cmd.Root().PersistentFlags().GetString("compose-project")
-	if err != nil {
-		return nil, fmt.Errorf("error getting --compose-project (%s): %v", project, err)
-	}
-	// if --dir was passed
-	// we might not have gotten the COMPOSE_PROJECT_NAME passed
-	// so try grabbing it
-	if project == "" {
-		env := filepath.Join(dir, ".env")
-		_ = godotenv.Load(env)
-		project = os.Getenv("COMPOSE_PROJECT_NAME")
-	}
-
-	bkc := &BuildkitCompose{
-		WorkingDirectory:    dir,
-		ComposeProfile:      profile,
-		ComposeProject:      project,
-		DrupalMultisiteName: site,
-	}
-
-	err = bkc.loadEnv()
-	if err != nil {
-		return nil, fmt.Errorf("not able to load environment. Do you need to run islectl up?\n%v", err)
-	}
-
-	return bkc, nil
-}
-
-func (bc *BuildkitCompose) loadEnv() error {
-
-	path := filepath.Join(bc.WorkingDirectory, "docker-compose.yml")
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
-	}
-
-	cli := GetDockerCli()
-
-	containerName := fmt.Sprintf("%s-mariadb-%s-1", bc.ComposeProject, bc.ComposeProfile)
+	containerName := fmt.Sprintf("%s-mariadb-%s-1", c.ProjectName, c.Profile)
 	ctx := context.Background()
 
 	var err error
@@ -87,27 +28,50 @@ func (bc *BuildkitCompose) loadEnv() error {
 		"DB_MYSQL_HOST",
 		"DB_MYSQL_PORT",
 	}
-	config := make(map[string]string, len(vars))
+	envs := make(map[string]string, len(vars))
 	for _, v := range vars {
-		config[v], err = GetSecret(ctx, cli, bc.WorkingDirectory, containerName, v)
+		envs[v], err = GetSecret(ctx, cli.CLI, c, containerName, v)
 		if err != nil {
-			return err
+			return "", "", err
 		}
 	}
-	containerName = fmt.Sprintf("%s-ide-1", bc.ComposeProject)
-	idePass, err := GetConfigEnv(ctx, cli, containerName, "CODE_SERVER_PASSWORD")
-	if err != nil {
-		return err
+
+	mysqlUri := fmt.Sprintf("mysql://%s:%s@%s:%s/%s", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"], envs["DB_MYSQL_HOST"], envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
+	sshUri := fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s&ssh_keyLocation=%s&ssh_keyLocationEnabled=1", c.SSHHostname, c.SSHPort, c.SSHUser, c.SSHKeyPath)
+	if c.DockerHostType == config.ContextLocal {
+		containerName = fmt.Sprintf("%s-ide-1", c.ProjectName)
+		idePass, err := GetConfigEnv(ctx, cli.CLI, containerName, "CODE_SERVER_PASSWORD")
+		if err != nil {
+			return "", "", err
+		}
+		sshUri = fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s&ssh_password=%s", c.SSHHostname, c.SSHPort, c.SSHUser, idePass)
+	} else if c.DockerHostType == config.ContextRemote {
+		// on remote hosts we need to get the IP address
+		// mariadb is exposed at in the network namespace
+		containerJSON, err := cli.CLI.ContainerInspect(ctx, containerName)
+		if err != nil {
+			return "", "", fmt.Errorf("error inspecting container %q: %v", containerName, err)
+		}
+
+		networkName := fmt.Sprintf("%s_default", c.ProjectName)
+		network, ok := containerJSON.NetworkSettings.Networks[networkName]
+		if !ok {
+			return "", "", fmt.Errorf("network %q not found in container %q", networkName, containerName)
+		}
+
+		mysqlUri = fmt.Sprintf("mysql://%s:%s@%s:%s/%s", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"], network.IPAddress, envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
+
 	}
 
-	bc.MySqlUri = fmt.Sprintf("mysql://%s:%s@%s:%s/%s", config["DB_ROOT_USER"], config["DB_ROOT_PASSWORD"], config["DB_MYSQL_HOST"], config["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", bc.DrupalMultisiteName))
-	bc.SshInfo = fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s&ssh_password=%s", os.Getenv("DOMAIN"), 2222, "nginx", idePass)
-
-	return nil
+	return mysqlUri, sshUri, nil
 }
 
-func (bc *BuildkitCompose) Setup(path, bt, ss, sn string) error {
-	fmt.Printf("Site doesn't appear to exist at %s.\nProceed creating it there? Y/n: ", bc.WorkingDirectory)
+func Setup(context *config.Context, bt, ss, sn string) error {
+	if context.DockerHostType == config.ContextRemote {
+		return fmt.Errorf("Currently setup is only supported on local machines")
+	}
+
+	fmt.Printf("Site doesn't appear to exist at %s.\nProceed creating it there? Y/n: ", context.ProjectDir)
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
@@ -123,7 +87,7 @@ func (bc *BuildkitCompose) Setup(path, bt, ss, sn string) error {
 	tmpFileName := downloadSetup()
 
 	// supply the child directory passed as what we'll call the site
-	name := filepath.Base(bc.WorkingDirectory)
+	name := filepath.Base(context.ProjectDir)
 	if sn != "" {
 		name = sn
 	}
@@ -140,12 +104,9 @@ func (bc *BuildkitCompose) Setup(path, bt, ss, sn string) error {
 		return fmt.Errorf("could not determine working directory: %v", err)
 	}
 
-	// by default, assummes we're naming the site the basepath of --dir
-	c.Dir = bc.WorkingDirectory
-	// but if --dir was passed and a sitename was not
-	// assumme we're naming the site
-	if wd != bc.WorkingDirectory && sn == "" {
-		c.Dir = filepath.Dir(bc.WorkingDirectory)
+	c.Dir = context.ProjectDir
+	if wd != context.ProjectDir && sn == "" {
+		c.Dir = filepath.Dir(context.ProjectDir)
 	}
 
 	c.Env = os.Environ()
