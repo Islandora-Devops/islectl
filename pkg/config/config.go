@@ -37,6 +37,8 @@ type Context struct {
 	SSHPort        uint        `yaml:"ssh-port,omitempty"`
 	SSHKeyPath     string      `yaml:"ssh-key,omitempty"`
 	Site           string      `yaml:"site"`
+	EnvFile        []string    `yaml:"env-file"`
+	RunSudo        bool        `yaml:"sudo"`
 }
 
 type Config struct {
@@ -156,6 +158,14 @@ func LoadFromFlags(f *pflag.FlagSet) (*Context, error) {
 				return nil, fmt.Errorf("error getting flag %q: %w", tag, err)
 			}
 			value = v
+		case reflect.Slice:
+			if field.Type.Elem().Kind() == reflect.String {
+				v, err := f.GetStringSlice(tag)
+				if err != nil {
+					return nil, fmt.Errorf("error getting string slice flag %q: %w", tag, err)
+				}
+				value = v
+			}
 		default:
 			v, err := f.GetString(tag)
 			if err != nil {
@@ -245,7 +255,6 @@ func (c *Context) ReadSmallFile(filename string) string {
 	}
 
 	return string(output)
-
 }
 
 func (c *Context) DialSSH() (*ssh.Client, error) {

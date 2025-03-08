@@ -287,6 +287,9 @@ func init() {
 	flags.String("project-name", "isle-site-template", "Name of the docker compose project")
 	flags.String("profile", "dev", "docker compose profile")
 	flags.String("site", "default", "drupal multisite")
+	flags.Bool("sudo", false, "for remote contexts, run commands as sudo")
+	flags.StringSlice("env-file", []string{}, "when running remote docker commands, the --env-file paths to pass to docker compose")
+
 	flags.Bool("default", false, "set to default context")
 
 	configCmd.AddCommand(viewConfigCmd)

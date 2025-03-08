@@ -67,6 +67,10 @@ func GetUris(c *config.Context) (string, string, error) {
 }
 
 func Setup(context *config.Context, bt, ss, sn string) error {
+	if context.DockerHostType == config.ContextRemote {
+		return fmt.Errorf("Currently setup is only supported on local machines")
+	}
+
 	fmt.Printf("Site doesn't appear to exist at %s.\nProceed creating it there? Y/n: ", context.ProjectDir)
 
 	reader := bufio.NewReader(os.Stdin)

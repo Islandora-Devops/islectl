@@ -25,7 +25,7 @@ var makeCmd = &cobra.Command{
 
 		c := exec.Command("make", args...)
 		c.Dir = context.ProjectDir
-		err = utils.RunCommand(c)
+		err = context.RunCommand(c)
 		if err != nil {
 			utils.ExitOnError(err)
 		}

@@ -26,13 +26,19 @@ var upCmd = &cobra.Command{
 			utils.ExitOnError(err)
 		}
 
-		bt, err := cmd.Flags().GetString("buildkit-tag")
-		if err != nil {
-			utils.ExitOnError(err)
+		path := filepath.Join(context.ProjectDir, "docker-compose.yml")
+		_, err = os.Stat(path)
+		if err != nil && !os.IsNotExist(err) {
+			slog.Error("Error checking for docker-compose.yml", "path", path, "err", err)
+			os.Exit(1)
 		}
 
-		path := filepath.Join(context.ProjectDir, "docker-compose.yml")
-		if _, err := os.Stat(path); os.IsNotExist(err) {
+		if context.DockerHostType == config.ContextLocal && os.IsNotExist(err) {
+			bt, err := cmd.Flags().GetString("buildkit-tag")
+			if err != nil {
+				utils.ExitOnError(err)
+			}
+
 			ss, err := cmd.Flags().GetString("starter-site")
 			if err != nil {
 				utils.ExitOnError(err)
@@ -46,22 +52,24 @@ var upCmd = &cobra.Command{
 			if err != nil {
 				utils.ExitOnError(err)
 			}
-		} else if err != nil {
-			slog.Error("Error checking for docker-compose.yml", "path", path, "err", err)
-			os.Exit(1)
 		}
 
 		cmdArgs := []string{
 			"compose",
 			"--profile",
 			context.Profile,
+		}
+		for _, env := range context.EnvFile {
+			cmdArgs = append(cmdArgs, "--env-file", env)
+		}
+		cmdArgs = append(cmdArgs, []string{
 			"up",
 			"-d",
 			"--remove-orphans",
-		}
+		}...)
 		c := exec.Command("docker", cmdArgs...)
 		c.Dir = context.ProjectDir
-		err = utils.RunCommand(c)
+		err = context.RunCommand(c)
 		if err != nil {
 			utils.ExitOnError(err)
 		}

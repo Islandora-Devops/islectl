@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/spf13/pflag"
@@ -84,6 +85,8 @@ func TestLoadFromFlags(t *testing.T) {
 	flags.String("project-dir", "/path/to/project", "Project directory")
 	flags.String("project-name", "foo", "Composer Project Name")
 	flags.String("site", "foo", "Composer Project Name")
+	flags.Bool("sudo", false, "Run commands on remote hosts as sudo")
+	flags.StringSlice("env-file", []string{}, "path to env files to pass to docker compose")
 
 	// Define test arguments to override defaults.
 	args := []string{
@@ -97,6 +100,9 @@ func TestLoadFromFlags(t *testing.T) {
 		"--project-dir", "/custom/project",
 		"--project-name", "bar",
 		"--site", "default",
+		"--sudo", "true",
+		"--env-file", ".env",
+		"--env-file", "/tmp/.env",
 	}
 	if err := flags.Parse(args); err != nil {
 		t.Fatalf("Error parsing flags: %v", err)
@@ -138,5 +144,11 @@ func TestLoadFromFlags(t *testing.T) {
 	if ctx.Site != "default" {
 		t.Errorf("Expected site 'default', got %q", ctx.ProjectName)
 	}
-
+	if ctx.RunSudo != true {
+		t.Errorf("Expected site 'true', got %t", ctx.RunSudo)
+	}
+	expectedSlice := []string{".env", "/tmp/.env"}
+	if !reflect.DeepEqual(ctx.EnvFile, expectedSlice) {
+		t.Errorf("expected env-file slice %v but got %v", expectedSlice, ctx.EnvFile)
+	}
 }
