@@ -8,11 +8,9 @@ import (
 	"log"
 	"log/slog"
 	"os"
-	"os/user"
-	"path/filepath"
 
+	"github.com/islandora-devops/islectl/internal/utils"
 	"github.com/islandora-devops/islectl/pkg/config"
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -120,45 +118,7 @@ var setContextCmd = &cobra.Command{
 
 		// override local defaults for remote environments
 		if cc.DockerHostType == config.ContextRemote {
-			if cc.SSHHostname == "islandora.dev" {
-				question := []string{
-					"You should not be setting SSH hostname to islandora.dev?\n",
-					"You may have forgot to pass --ssh-hostname",
-					"Instead you can enter the remote server domain name here: ",
-				}
-				h, err := config.GetInput(question...)
-				if err != nil || h == "" {
-					slog.Error("Error reading input")
-					os.Exit(1)
-				}
-				cc.SSHHostname = h
-
-			}
-			if cc.SSHUser == "nginx" {
-				u, err := user.Current()
-				if err != nil {
-					slog.Error("Unable to determine current user", "err", err)
-					os.Exit(1)
-				}
-				cc.SSHUser = u.Username
-				slog.Warn("You may need to pass --ssh-user for the remote host. Defaulting to your username to connect to the remote host", "name", u.Username)
-			}
-
-			if cc.Profile == "dev" {
-				question := []string{
-					"Are you sure you want \"dev\" for the docker compose profile on the remote context?\n",
-					"Enter the profile here, enter nothing to keep dev: [dev]: ",
-				}
-				p, err := config.GetInput(question...)
-				if err != nil {
-					slog.Error("Error reading input")
-					os.Exit(1)
-				}
-				if p != "" {
-					slog.Info("Setting profile", "profile", p)
-					cc.Profile = p
-				}
-			}
+			cc.VerifyRemoteInput()
 		} else if cc.DockerHostType == config.ContextLocal {
 			cc.SSHKeyPath = ""
 			cc.DockerSocket = config.GetDefaultLocalDockerSocket(cc.DockerSocket)
@@ -167,37 +127,8 @@ var setContextCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		cfg, err := config.Load()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		updated := false
-		for i, ctx := range cfg.Contexts {
-			if ctx.Name == cc.Name {
-				cfg.Contexts[i] = *cc
-
-				updated = true
-				break
-			}
-		}
-
-		if !updated {
-			cfg.Contexts = append(cfg.Contexts, *cc)
-			if cfg.CurrentContext == "" {
-				cfg.CurrentContext = cc.Name
-			}
-			fmt.Printf("Added new context: %s\n", cc.Name)
-		} else {
-			fmt.Printf("Updated context: %s\n", cc.Name)
-		}
-
-		if defaultContext {
-			cfg.CurrentContext = cc.Name
-		}
-
-		if err = config.Save(cfg); err != nil {
-			log.Fatal(err)
+		if err = config.SaveContext(cc, defaultContext); err != nil {
+			utils.ExitOnError(err)
 		}
 	},
 }
@@ -268,34 +199,8 @@ var deleteContextCmd = &cobra.Command{
 }
 
 func init() {
-	path, err := os.Getwd()
-	if err != nil {
-		slog.Error("Unable to get current working directory", "err", err)
-		os.Exit(1)
-	}
-	env := filepath.Join(path, ".env")
-	_ = godotenv.Load(env)
-
-	key := filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
-
 	flags := setContextCmd.Flags()
-
-	// NB: these flags must match the corresponding config.Context yaml struct tag
-	// though we can add additional flags that have no match for additional functionality
-	// in the command logic (e.g. default)
-	flags.String("docker-socket", "/var/run/docker.sock", "Path to Docker socket")
-	flags.String("type", "local", "Type of context: local or remote")
-	flags.String("ssh-hostname", "islandora.dev", "Remote contexts DNS name for the host.")
-	flags.Uint("ssh-port", 2222, "Port number")
-	flags.String("ssh-user", "nginx", "SSH user for remote context")
-	flags.String("ssh-key", key, "Path to SSH private key for remote context")
-	flags.String("project-dir", path, "Path to docker compose project directory")
-	flags.String("project-name", "isle-site-template", "Name of the docker compose project")
-	flags.String("profile", "dev", "docker compose profile")
-	flags.String("site", "default", "drupal multisite")
-	flags.Bool("sudo", false, "for remote contexts, run commands as sudo")
-	flags.StringSlice("env-file", []string{}, "when running remote docker commands, the --env-file paths to pass to docker compose")
-
+	config.SetCommandFlags(flags)
 	flags.Bool("default", false, "set to default context")
 
 	configCmd.AddCommand(viewConfigCmd)

@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/joho/godotenv"
 	shellquote "github.com/kballard/go-shellquote"
+	"github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
 )
@@ -140,4 +142,32 @@ func promptPassword() (string, error) {
 		return "", err
 	}
 	return string(pwdBytes), nil
+}
+
+func SetCommandFlags(flags *pflag.FlagSet) {
+	path, err := os.Getwd()
+	if err != nil {
+		slog.Error("Unable to get current working directory", "err", err)
+		os.Exit(1)
+	}
+	env := filepath.Join(path, ".env")
+	_ = godotenv.Load(env)
+
+	key := filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
+
+	// NB: these flags must match the corresponding config.Context yaml struct tag
+	// though we can add additional flags that have no match for additional functionality
+	// in the command logic (e.g. default)
+	flags.String("docker-socket", "/var/run/docker.sock", "Path to Docker socket")
+	flags.String("type", "local", "Type of context: local or remote")
+	flags.String("ssh-hostname", "islandora.dev", "Remote contexts DNS name for the host.")
+	flags.Uint("ssh-port", 2222, "Port number")
+	flags.String("ssh-user", "nginx", "SSH user for remote context")
+	flags.String("ssh-key", key, "Path to SSH private key for remote context")
+	flags.String("project-dir", path, "Path to docker compose project directory")
+	flags.String("project-name", "isle-site-template", "Name of the docker compose project")
+	flags.String("profile", "dev", "docker compose profile")
+	flags.String("site", "default", "drupal multisite")
+	flags.Bool("sudo", false, "for remote contexts, run commands as sudo")
+	flags.StringSlice("env-file", []string{}, "when running remote docker commands, the --env-file paths to pass to docker compose")
 }
