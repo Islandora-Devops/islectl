@@ -27,9 +27,11 @@ RUN mkdir -p /home/foo/.ssh && chown foo:foo /home/foo/.ssh && chmod 700 /home/f
 RUN curl -JLO "https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-linux-amd64"
 RUN mv mkcert-v1.4.4-linux-amd64 /usr/local/bin/mkcert && chmod +x /usr/local/bin/mkcert
 
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
 USER foo
-RUN git config --global user.email "you@example.com" && \
-  git config --global user.name "Your Name"
+RUN git config --global user.email "foo@localhost.localdomain" && \
+    git config --global user.name "foo"
 
 USER root
 EXPOSE 22
