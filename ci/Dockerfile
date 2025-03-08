@@ -34,4 +34,4 @@ RUN git config --global user.email "you@example.com" && \
 USER root
 EXPOSE 22
 
-ENTRYPOINT ["/usr/sbin/sshd", "-D", "-e"]
+ENTRYPOINT ["/docker-entrypoint.sh"]

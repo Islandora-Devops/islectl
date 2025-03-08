@@ -12,22 +12,22 @@ Usage:
   islectl [command]
 
 Available Commands:
+  build       Build the Drupal container.
   completion  Generate the autocompletion script for the specified shell
   config      Manage ISLE command configuration
+  create      Create an ISLE site and its islectl context.
+  down        Run docker compose down
   help        Help about any command
   login       Runs "drush uli" to provide a direct login link
   make        Run custom make commands
   pull        Fetches the latest images from the registry.
   sequelace   Connect to your ISLE database using Sequel Ace (Mac OS only)
-  up          Brings up the containers or builds starter if no containers were found.
+  up          Brings up the containers
 
 Flags:
   -c, --context string   The ISLE context to use. See islectl config --help for more info (default "dev")
   -h, --help             help for islectl
-  -s, --site string      The name of the site. If yr not using multi-site don't worry about this. (default "default")
   -v, --version          version for islectl
-
-Use "islectl [command] --help" for more information about a command.
 ```
 
 Each command has a `--help` flag that provide what flags can be passed to the given command.

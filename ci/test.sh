@@ -4,8 +4,6 @@ set -eou pipefail
 
 go build
 
-docker build -t ghcr.io/islandora-devops/islectl:ci ./ci
-
 if [ ! -f ./ci/host-keys/ssh_host_ed25519_key ]; then
   ssh-keygen -t ed25519 -f ./ci/host-keys/ssh_host_ed25519_key -N ""
 fi
