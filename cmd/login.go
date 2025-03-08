@@ -4,7 +4,7 @@ Copyright © 2025 Islandora Foundation
 package cmd
 
 import (
-	"log/slog"
+	"fmt"
 	"os/exec"
 
 	"github.com/islandora-devops/islectl/internal/utils"
@@ -12,13 +12,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// run docker compose pull
-var pullCmd = &cobra.Command{
-	Use:   "pull",
-	Short: "Fetches the latest images from the registry.",
+// login runs drush uli
+var loginCmd = &cobra.Command{
+	Use:   "login",
+	Short: `Runs "drush uli" to provide a direct login link`,
 	Run: func(cmd *cobra.Command, args []string) {
 		f := cmd.Flags()
 		context, err := config.CurrentContext(f)
+		if err != nil {
+			utils.ExitOnError(err)
+		}
+		uid, err := f.GetUint("uid")
 		if err != nil {
 			utils.ExitOnError(err)
 		}
@@ -31,17 +35,24 @@ var pullCmd = &cobra.Command{
 		for _, env := range context.EnvFile {
 			cmdArgs = append(cmdArgs, "--env-file", env)
 		}
-		cmdArgs = append(cmdArgs, "pull")
+		cmdArgs = append(cmdArgs, []string{
+			"exec",
+			fmt.Sprintf("drupal-%s", context.Profile),
+			"bash",
+			"-c",
+			fmt.Sprintf("drush uli --uri=$DRUPAL_DRUSH_URI --uid=%d", uid),
+		}...)
 		c := exec.Command("docker", cmdArgs...)
 		c.Dir = context.ProjectDir
 		err = context.RunCommand(c)
 		if err != nil {
 			utils.ExitOnError(err)
 		}
-		slog.Info("pull complete")
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(pullCmd)
+	rootCmd.AddCommand(loginCmd)
+	loginCmd.Flags().Uint("uid", 1, "Drupal user ID to provide a direct login link for")
+
 }

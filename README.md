@@ -119,7 +119,7 @@ rm $ARCH
 - [ ] Implement `make config-import` Import the sites configuration. N.B You may need to run this multiple times in succession due to errors in the configurations dependencies.
 - [ ] Implement `make demo_content` Helper function for demo sites: do a workbench import of sample objects
 - [ ] Implement `make hydrate` Reconstitute the site from environment variables.
-- [ ] Implement `make login` Runs "drush uli" to provide a direct login link for user 1
+- [x] Implement `make login` Runs "drush uli" to provide a direct login link for user 1
 - [ ] Implement `make secrets_warning` Check to see if the secrets directory contains default secrets.
 - [ ] Implement `make fix_masonry` Fix missing masonry library.
 - [ ] Implement `make fix_views` This fixes a know issues with views when using the make local build. The error must be triggered before this will work.
