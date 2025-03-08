@@ -37,7 +37,6 @@ ssh-keyscan -p 1234 localhost > ./ci/ssh/known_hosts
   --yes
 
 ./islectl build --context foo
-./islectl pull --context foo
 ./islectl down --context foo
 
 docker compose --file ./ci/docker-compose.yml down
