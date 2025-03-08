@@ -1,0 +1,2 @@
+Host localhost
+    HostkeyAlgorithms +ssh-ed25519-sk,ssh-ecdsa-sk

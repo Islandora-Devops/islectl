@@ -1,1 +1,7 @@
 islectl
+ci/ssh/*
+!ci/ssh/
+!ci/ssh/config
+ci/host-keys/*
+!ci/host-keys/
+!ci/host-keys/.keep

@@ -3,15 +3,18 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"os"
 	"os/user"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pkg/sftp"
 	"github.com/spf13/pflag"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -76,6 +79,21 @@ func Load() (*Config, error) {
 	return &cfg, err
 }
 
+func ContextExists(name string) (bool, error) {
+	c, err := Load()
+	if err != nil {
+		return false, err
+	}
+
+	for _, context := range c.Contexts {
+		if strings.EqualFold(context.Name, name) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func Save(cfg *Config) error {
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -94,6 +112,39 @@ func Current() (string, error) {
 	}
 
 	return cfg.CurrentContext, nil
+}
+
+func SaveContext(ctx *Context, setDefault bool) error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+
+	updated := false
+	for i, c := range cfg.Contexts {
+		if c.Name == ctx.Name {
+			cfg.Contexts[i] = *ctx
+
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		cfg.Contexts = append(cfg.Contexts, *ctx)
+		if cfg.CurrentContext == "" {
+			cfg.CurrentContext = ctx.Name
+		}
+		fmt.Printf("Added new context: %s\n", ctx.Name)
+	} else {
+		fmt.Printf("Updated context: %s\n", ctx.Name)
+	}
+
+	if setDefault {
+		cfg.CurrentContext = ctx.Name
+	}
+
+	return Save(cfg)
 }
 
 func CurrentContext(f *pflag.FlagSet) (*Context, error) {
@@ -121,15 +172,20 @@ func CurrentContext(f *pflag.FlagSet) (*Context, error) {
 
 func GetInput(question ...string) (string, error) {
 	reader := bufio.NewReader(os.Stdin)
-	for _, l := range question {
-		fmt.Print(l)
+	lastItemIndex := len(question) - 1
+	for i := range question {
+		if i == lastItemIndex {
+			fmt.Print(question[i])
+			continue
+		}
+		fmt.Println(question[i])
 	}
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("unable to readon from stdin: %v", err)
 	}
 	input = strings.TrimSpace(input)
-
+	fmt.Println()
 	return input, nil
 }
 
@@ -267,11 +323,7 @@ func (c *Context) DialSSH() (*ssh.Client, error) {
 		return nil, fmt.Errorf("error parsing SSH key: %w", err)
 	}
 
-	usr, err := user.Current()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get current user: %w", err)
-	}
-	knownHostsPath := filepath.Join(usr.HomeDir, ".ssh", "known_hosts")
+	knownHostsPath := filepath.Join(filepath.Dir(c.SSHKeyPath), "known_hosts")
 	hostKeyCallback, err := knownhosts.New(knownHostsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating known_hosts callback: %w", err)
@@ -293,4 +345,138 @@ func (c *Context) DialSSH() (*ssh.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (c *Context) ProjectDirExists() (bool, error) {
+	if c.DockerHostType == ContextLocal {
+		_, err := os.Stat(c.ProjectDir)
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		if err != nil {
+			return true, err
+		}
+
+		return !os.IsNotExist(err), nil
+	}
+
+	client, err := c.DialSSH()
+	if err != nil {
+		slog.Error("Error establishing SSH connection", "err", err)
+		return false, err
+	}
+	defer client.Close()
+
+	session, err := client.NewSession()
+	if err != nil {
+		slog.Error("Error creating SSH session", "err", err)
+		return false, err
+	}
+	defer session.Close()
+
+	_, err = session.Output(fmt.Sprintf("test -e %s", c.ProjectDir))
+	if err != nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (cc *Context) VerifyRemoteInput() {
+	if cc.SSHHostname == "islandora.dev" {
+		question := []string{
+			"You should not be setting SSH hostname to islandora.dev",
+			"You may have forgot to pass --ssh-hostname",
+			"Instead you can enter the remote server domain name here: ",
+		}
+		h, err := GetInput(question...)
+		if err != nil || h == "" {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		cc.SSHHostname = h
+	}
+
+	if cc.SSHUser == "nginx" {
+		u, err := user.Current()
+		if err != nil {
+			slog.Error("Unable to determine current user", "err", err)
+			os.Exit(1)
+		}
+		cc.SSHUser = u.Username
+		slog.Warn("You may need to pass --ssh-user for the remote host.")
+		slog.Warn("Defaulting to your username to connect to the remote host", "name", u.Username)
+	}
+
+	if cc.SSHPort == 2222 {
+		question := []string{
+			"You may have forgot to pass --ssh-port",
+			"The default value is 2222, which is a good default for local contexts",
+			"You can enter the port to connect to [2222]: ",
+		}
+		p, err := GetInput(question...)
+		if err != nil {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		if p != "" {
+			port, err := strconv.Atoi(p)
+			if err != nil {
+				slog.Error("Unable to convert input to int")
+				os.Exit(1)
+
+			}
+			cc.SSHPort = uint(port)
+		}
+	}
+
+	if cc.Profile == "dev" {
+		question := []string{
+			"Are you sure you want \"dev\" for the docker compose profile on the remote context?",
+			"Enter the profile here, enter nothing to keep dev: [dev]: ",
+		}
+		p, err := GetInput(question...)
+		if err != nil {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		if p != "" {
+			slog.Info("Setting profile", "profile", p)
+			cc.Profile = p
+		}
+	}
+}
+
+func (c *Context) UploadFile(source, destination string) error {
+	client, err := c.DialSSH()
+	if err != nil {
+		slog.Error("Error establishing SSH connection", "err", err)
+		return err
+	}
+	defer client.Close()
+
+	sftpClient, err := sftp.NewClient(client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sftpClient.Close()
+
+	localFile, err := os.Open(source)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer localFile.Close()
+
+	remoteFile, err := sftpClient.Create(destination)
+	if err != nil {
+		return err
+	}
+	defer remoteFile.Close()
+
+	_, err = remoteFile.ReadFrom(localFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

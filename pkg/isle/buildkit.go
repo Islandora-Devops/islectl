@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/islandora-devops/islectl/pkg/config"
+	yaml "gopkg.in/yaml.v3"
 )
 
 func GetUris(c *config.Context) (string, string, error) {
@@ -66,73 +67,70 @@ func GetUris(c *config.Context) (string, string, error) {
 	return mysqlUri, sshUri, nil
 }
 
-func Setup(context *config.Context, bt, ss, sn string) error {
-	if context.DockerHostType == config.ContextRemote {
-		return fmt.Errorf("Currently setup is only supported on local machines")
-	}
-
-	fmt.Printf("Site doesn't appear to exist at %s.\nProceed creating it there? Y/n: ", context.ProjectDir)
-
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
+func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss string) error {
+	out, err := yaml.Marshal(context)
 	if err != nil {
-		return fmt.Errorf("error reading input: %v", err)
+		slog.Error("Unable to parse context")
+		return err
 	}
-	input = strings.TrimSpace(input)
-	if input != "" && !strings.EqualFold(input, "Y") {
-		return fmt.Errorf("cancelling install operation")
+	fmt.Println("\nHere is the context that will be created")
+	fmt.Println(string(out))
+
+	fmt.Println("\nAnd these buildkit/starter site flags")
+	flags := []string{
+		fmt.Sprintf("--buildkit-tag=%s", bt),
+		fmt.Sprintf("--starter-site-branch=%s", ss),
+		fmt.Sprintf("--site-name=%s", context.ProjectName),
+	}
+	for _, f := range flags {
+		fmt.Println(f)
+	}
+	if !confirmed {
+		fmt.Printf("\nAre you sure you want to proceed creating the site? y/N: ")
+
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("error reading input: %v", err)
+		}
+		input = strings.TrimSpace(input)
+		if !strings.EqualFold(input, "y") && !strings.EqualFold(input, "yes") {
+			return fmt.Errorf("cancelling install operation")
+		}
 	}
 
 	fmt.Println("Creating site...")
 	tmpFileName := downloadSetup()
-
-	// supply the child directory passed as what we'll call the site
-	name := filepath.Base(context.ProjectDir)
-	if sn != "" {
-		name = sn
+	if context.DockerHostType == config.ContextRemote {
+		destination := "/tmp/isle-setup.sh"
+		err = context.UploadFile(tmpFileName, "/tmp/isle-setup.sh")
+		if err != nil {
+			return fmt.Errorf("unable to upload file to %s: %v", destination, err)
+		}
+		tmpFileName = destination
 	}
+
 	cmdArgs := []string{
+		"-l",
 		tmpFileName,
-		fmt.Sprintf("--buildkit-tag=%s", bt),
-		fmt.Sprintf("--starter-site-branch=%s", ss),
-		fmt.Sprintf("--site-name=%s", name),
 	}
+	cmdArgs = append(cmdArgs, flags...)
 	c := exec.Command("bash", cmdArgs...)
+	originalDir := context.ProjectDir
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("could not determine working directory: %v", err)
+	// need to cd into the base dir of the project
+	context.ProjectDir = filepath.Dir(context.ProjectDir)
+	if err = context.RunCommand(c); err != nil {
+		slog.Error("Error installing site", "err", err)
+		os.Exit(1)
 	}
 
-	c.Dir = context.ProjectDir
-	if wd != context.ProjectDir && sn == "" {
-		c.Dir = filepath.Dir(context.ProjectDir)
+	// put project dir back to its original value before saving the context
+	context.ProjectDir = originalDir
+	if err = config.SaveContext(context, defaultContext); err != nil {
+		slog.Error("Error saving context.", "err", err)
+		os.Exit(1)
 	}
-
-	c.Env = os.Environ()
-	c.Stdin = os.Stdin
-	stdoutPipe, err := c.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("error writing to stdout: %v", err)
-	}
-	c.Stderr = os.Stderr
-
-	if err := c.Start(); err != nil {
-		return fmt.Errorf("error starting command %s: %v", c.String(), err)
-	}
-
-	scanner := bufio.NewScanner(stdoutPipe)
-	for scanner.Scan() {
-		fmt.Println(scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error reading stdout %s: %v", c.String(), err)
-	}
-
-	if err := c.Wait(); err != nil {
-		return fmt.Errorf("error running command %s: %v", c.String(), err)
-	}
-
 	fmt.Println("Site created!")
 
 	return nil
