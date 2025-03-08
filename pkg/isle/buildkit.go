@@ -111,6 +111,7 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 	}
 
 	cmdArgs := []string{
+		"-l",
 		tmpFileName,
 	}
 	cmdArgs = append(cmdArgs, flags...)

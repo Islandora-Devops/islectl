@@ -4,6 +4,11 @@ set -eou pipefail
 
 go build
 
+GITHUB_ACTIONS="${GITHUB_ACTIONS:=false}"
+if [ "$GITHUB_ACTIONS" = "false" ]; then
+  docker build -t ghcr.io/islandora-devops/islectl:ci ./ci
+fi
+
 if [ ! -f ./ci/host-keys/ssh_host_ed25519_key ]; then
   ssh-keygen -t ed25519 -f ./ci/host-keys/ssh_host_ed25519_key -N ""
 fi
@@ -24,6 +29,7 @@ ssh-keyscan -p 1234 localhost > ./ci/ssh/known_hosts
   --type remote \
   --profile dev \
   --project-dir /home/foo/isle \
+  --project-name isle \
   --ssh-hostname localhost \
   --ssh-port 1234 \
   --ssh-user foo \
@@ -34,4 +40,4 @@ ssh-keyscan -p 1234 localhost > ./ci/ssh/known_hosts
 ./islectl pull --context foo
 ./islectl down --context foo
 
-docker compose --file ./ci/docker-compose.yml up -d
+docker compose --file ./ci/docker-compose.yml down
