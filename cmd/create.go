@@ -110,5 +110,8 @@ func init() {
 	flags.String("starter-site", "main", "starter-site to install")
 	flags.Bool("default", false, "set to default context")
 
-	createCmd.MarkFlagRequired("context-name")
+	err := createCmd.MarkFlagRequired("context-name")
+	if err != nil {
+		slog.Error("Could not set context-name flag as required", "err", err)
+	}
 }
