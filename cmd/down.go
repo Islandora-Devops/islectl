@@ -13,8 +13,8 @@ import (
 
 // run docker compose down
 var downCmd = &cobra.Command{
-	Use:   "build",
-	Short: "Stop the docker compose project and delete the containers.",
+	Use:   "down",
+	Short: "Run docker compose down",
 	Run: func(cmd *cobra.Command, args []string) {
 		f := cmd.Flags()
 		context, err := config.CurrentContext(f)

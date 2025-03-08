@@ -20,7 +20,7 @@ Documentation is available at https://islandora-devops.github.io/islectl/
 - [x] Implement `make pull` Fetches the latest images from the registry.
 - [x] Implement `make build` Create Dockerfile from example if it does not exist.
 - [ ] Implement `make push-image` Push your custom drupal image to dockerhub or a container registry
-- [ ] Implement `make down` Brings down the containers. Same as docker compose down --remove-orphans
+- [x] Implement `make down` Brings down the containers. Same as docker compose down --remove-orphans
 - [ ] Implement `make env` Pull in changes to the .env file.
 - [ ] Implement `make set_admin_password` Sets the Drupal admin password and accomodates for permissions restrictions to the secrets directory. Only runs sudo when needed.
 - [ ] Implement `make clean` Destroys everything beware!
