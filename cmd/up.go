@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/islandora-devops/islectl/internal/utils"
+	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/islandora-devops/islectl/pkg/isle"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,8 @@ var upCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Brings up the containers or builds starter if no containers were found.",
 	Run: func(cmd *cobra.Command, args []string) {
-		bc, err := isle.NewBuildkitCommand(cmd)
+		f := cmd.Flags()
+		context, err := config.CurrentContext(f)
 		if err != nil {
 			utils.ExitOnError(err)
 		}
@@ -29,7 +31,7 @@ var upCmd = &cobra.Command{
 			utils.ExitOnError(err)
 		}
 
-		path := filepath.Join(bc.WorkingDirectory, "docker-compose.yml")
+		path := filepath.Join(context.ProjectDir, "docker-compose.yml")
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			ss, err := cmd.Flags().GetString("starter-site")
 			if err != nil {
@@ -40,7 +42,7 @@ var upCmd = &cobra.Command{
 			if err != nil {
 				utils.ExitOnError(err)
 			}
-			err = bc.Setup(path, bt, ss, sn)
+			err = isle.Setup(context, bt, ss, sn)
 			if err != nil {
 				utils.ExitOnError(err)
 			}
@@ -52,13 +54,13 @@ var upCmd = &cobra.Command{
 		cmdArgs := []string{
 			"compose",
 			"--profile",
-			bc.ComposeProfile,
+			context.Profile,
 			"up",
 			"-d",
 			"--remove-orphans",
 		}
 		c := exec.Command("docker", cmdArgs...)
-		c.Dir = bc.WorkingDirectory
+		c.Dir = context.ProjectDir
 		err = utils.RunCommand(c)
 		if err != nil {
 			utils.ExitOnError(err)
