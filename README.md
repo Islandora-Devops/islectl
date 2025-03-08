@@ -32,18 +32,18 @@ Usage:
 
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
+  config      Manage ISLE command configuration
   help        Help about any command
   make        Run custom make commands
+  pull        Fetches the latest images from the registry.
   sequelace   Connect to your ISLE database using Sequel Ace (Mac OS only)
   up          Brings up the containers or builds starter if no containers were found.
 
 Flags:
-      --compose-project string   Docker compose project name (default "isle-site-template")
-  -d, --dir string               path to isle-site-template for your site. Defaults to current directory. (default "/tmp/isle-site-template")
-  -h, --help                     help for islectl
-  -p, --profile string           docker compose profile (dev or prod) (default "dev")
-  -s, --site string              The name of the site, in reference to isle-buildkit's drupal multisite support. (default "default")
-  -v, --version                  version for islectl
+  -c, --context string   The ISLE context to use. See islectl config --help for more info (default "dev")
+  -h, --help             help for islectl
+  -s, --site string      The name of the site. If yr not using multi-site don't worry about this. (default "default")
+  -v, --version          version for islectl
 
 Use "islectl [command] --help" for more information about a command.
 ```
@@ -108,7 +108,7 @@ rm $ARCH
 - [x] Implement `make up` Brings up the containers or builds starter if no containers were found.
 - [ ] Implement `make starter` Make a local site with codebase directory bind mounted, using starter site unless other package specified in .env or present already.
 - [ ] Implement `starter_dev` Make a local site with codebase directory bind mounted, using cloned starter site.
-- [ ] Implement `make pull` Fetches the latest images from the registry.
+- [x] Implement `make pull` Fetches the latest images from the registry.
 - [ ] Implement `make build` Create Dockerfile from example if it does not exist.
 - [ ] Implement `make push-image` Push your custom drupal image to dockerhub or a container registry
 - [ ] Implement `make down` Brings down the containers. Same as docker compose down --remove-orphans
