@@ -1,0 +1,11 @@
+services:
+  ssh:
+    image: ghcr.io/islandora-devops/islectl:ci
+    ports:
+      - "1234:22"
+      - "8443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:z,rw
+      - ./ssh/id_rsa.pub:/home/foo/.ssh/authorized_keys:ro
+      - ./host-keys/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro
+      - ./host-keys/ssh_host_ed25519_key.pub:/etc/ssh/ssh_host_ed25519_key.pub:ro

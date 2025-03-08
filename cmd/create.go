@@ -30,14 +30,12 @@ var createCmd = &cobra.Command{
 			utils.ExitOnError(err)
 		}
 
+		context.Name, err = cmd.Flags().GetString("context-name")
+		if err != nil {
+			utils.ExitOnError(err)
+		}
+
 		if !trustFlags {
-			n, err := config.GetInput("What to name the context? ")
-			if err != nil {
-				utils.ExitOnError(err)
-			}
-			if n != "" {
-				context.Name = n
-			}
 			if context.Name == "" {
 				slog.Error("Can not have a blank context name")
 				os.Exit(1)
@@ -87,18 +85,13 @@ var createCmd = &cobra.Command{
 			utils.ExitOnError(err)
 		}
 
-		sn, err := cmd.Flags().GetString("site-name")
-		if err != nil {
-			utils.ExitOnError(err)
-		}
-
 		defaultContext, err := f.GetBool("default")
 		if err != nil {
 			fmt.Printf("Error reading default flag: %v\n", err)
 			return
 		}
 
-		err = isle.Setup(context, defaultContext, bt, ss, sn)
+		err = isle.Setup(context, defaultContext, trustFlags, bt, ss)
 		if err != nil {
 			utils.ExitOnError(err)
 		}
@@ -112,9 +105,10 @@ func init() {
 	flags := createCmd.Flags()
 	config.SetCommandFlags(flags)
 	flags.Bool("yes", false, "Skip asking questions and just do the thing")
-	flags.String("buildkit-tag", "main", "isle-buildkit tag to install. Only used on creation")
-	flags.String("starter-site", "main", "starter-site to install. Only used on creation")
-	flags.String("site-name", "", "site name to install. Only used on creation")
+	flags.String("context-name", "", "Name of the context")
+	flags.String("buildkit-tag", "main", "isle-buildkit tag to install")
+	flags.String("starter-site", "main", "starter-site to install")
 	flags.Bool("default", false, "set to default context")
 
+	createCmd.MarkFlagRequired("context-name")
 }

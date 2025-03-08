@@ -323,11 +323,7 @@ func (c *Context) DialSSH() (*ssh.Client, error) {
 		return nil, fmt.Errorf("error parsing SSH key: %w", err)
 	}
 
-	usr, err := user.Current()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get current user: %w", err)
-	}
-	knownHostsPath := filepath.Join(usr.HomeDir, ".ssh", "known_hosts")
+	knownHostsPath := filepath.Join(filepath.Dir(c.SSHKeyPath), "known_hosts")
 	hostKeyCallback, err := knownhosts.New(knownHostsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating known_hosts callback: %w", err)

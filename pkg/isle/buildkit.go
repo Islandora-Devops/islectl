@@ -67,7 +67,7 @@ func GetUris(c *config.Context) (string, string, error) {
 	return mysqlUri, sshUri, nil
 }
 
-func Setup(context *config.Context, defaultContext bool, bt, ss, sn string) error {
+func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss string) error {
 	out, err := yaml.Marshal(context)
 	if err != nil {
 		slog.Error("Unable to parse context")
@@ -80,21 +80,23 @@ func Setup(context *config.Context, defaultContext bool, bt, ss, sn string) erro
 	flags := []string{
 		fmt.Sprintf("--buildkit-tag=%s", bt),
 		fmt.Sprintf("--starter-site-branch=%s", ss),
-		fmt.Sprintf("--site-name=%s", context.Name),
+		fmt.Sprintf("--site-name=%s", context.ProjectName),
 	}
 	for _, f := range flags {
 		fmt.Println(f)
 	}
-	fmt.Printf("\nAre you sure you want to proceed creating the site? y/N: ")
+	if !confirmed {
+		fmt.Printf("\nAre you sure you want to proceed creating the site? y/N: ")
 
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("error reading input: %v", err)
-	}
-	input = strings.TrimSpace(input)
-	if !strings.EqualFold(input, "y") && !strings.EqualFold(input, "yes") {
-		return fmt.Errorf("cancelling install operation")
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("error reading input: %v", err)
+		}
+		input = strings.TrimSpace(input)
+		if !strings.EqualFold(input, "y") && !strings.EqualFold(input, "yes") {
+			return fmt.Errorf("cancelling install operation")
+		}
 	}
 
 	fmt.Println("Creating site...")
@@ -113,17 +115,21 @@ func Setup(context *config.Context, defaultContext bool, bt, ss, sn string) erro
 	}
 	cmdArgs = append(cmdArgs, flags...)
 	c := exec.Command("bash", cmdArgs...)
-	c.Dir = filepath.Dir(context.ProjectDir)
-	if err := c.Run(); err != nil {
-		slog.Error("Error installing site.", "err", err)
+	originalDir := context.ProjectDir
+
+	// need to cd into the base dir of the project
+	context.ProjectDir = filepath.Dir(context.ProjectDir)
+	if err = context.RunCommand(c); err != nil {
+		slog.Error("Error installing site", "err", err)
 		os.Exit(1)
 	}
 
+	// put project dir back to its original value before saving the context
+	context.ProjectDir = originalDir
 	if err = config.SaveContext(context, defaultContext); err != nil {
 		slog.Error("Error saving context.", "err", err)
 		os.Exit(1)
 	}
-
 	fmt.Println("Site created!")
 
 	return nil

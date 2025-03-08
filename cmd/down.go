@@ -1,0 +1,42 @@
+/*
+Copyright © 2025 Islandora Foundation
+*/
+package cmd
+
+import (
+	"os/exec"
+
+	"github.com/islandora-devops/islectl/internal/utils"
+	"github.com/islandora-devops/islectl/pkg/config"
+	"github.com/spf13/cobra"
+)
+
+// run docker compose down
+var downCmd = &cobra.Command{
+	Use:   "build",
+	Short: "Stop the docker compose project and delete the containers.",
+	Run: func(cmd *cobra.Command, args []string) {
+		f := cmd.Flags()
+		context, err := config.CurrentContext(f)
+		if err != nil {
+			utils.ExitOnError(err)
+		}
+
+		cmdArgs := []string{
+			"compose",
+			"--profile",
+			context.Profile,
+		}
+		cmdArgs = append(cmdArgs, "down")
+		c := exec.Command("docker", cmdArgs...)
+		c.Dir = context.ProjectDir
+		err = context.RunCommand(c)
+		if err != nil {
+			utils.ExitOnError(err)
+		}
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(downCmd)
+}
