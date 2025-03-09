@@ -23,7 +23,7 @@ var drushCmd = &cobra.Command{
 	Long: `
 Short hand for "islectl exec drupal drush".
 
-This allows us to easily add additional features around command drush commands
+This allows us to easily add additional features around common drush commands
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// since we're disabling flag parsing to make easy passing of flags to drush
