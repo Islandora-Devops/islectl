@@ -15,17 +15,17 @@ Available Commands:
   build       Build the Drupal container.
   completion  Generate the autocompletion script for the specified shell
   config      Manage ISLE command configuration
-  create      Create an ISLE site and its islectl context.
+  create-site Create an ISLE site and its islectl context.
   down        Run docker compose down
+  drush       Run drush commands on ISLE contexts
   help        Help about any command
-  login       Runs "drush uli" to provide a direct login link
   make        Run custom make commands
   pull        Fetches the latest images from the registry.
   sequelace   Connect to your ISLE database using Sequel Ace (Mac OS only)
   up          Brings up the containers
 
 Flags:
-  -c, --context string   The ISLE context to use. See islectl config --help for more info (default "dev")
+      --context string   The ISLE context to use. See islectl config --help for more info (default "dev")
   -h, --help             help for islectl
   -v, --version          version for islectl
 ```
