@@ -47,7 +47,7 @@ var upCmd = &cobra.Command{
 		}...)
 		c := exec.Command("docker", cmdArgs...)
 		c.Dir = context.ProjectDir
-		err = context.RunCommand(c)
+		_, err = context.RunCommand(c)
 		if err != nil {
 			utils.ExitOnError(err)
 		}

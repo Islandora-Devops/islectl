@@ -33,7 +33,7 @@ var buildCmd = &cobra.Command{
 		cmdArgs = append(cmdArgs, "build", "--pull", "--quiet")
 		c := exec.Command("docker", cmdArgs...)
 		c.Dir = context.ProjectDir
-		err = context.RunCommand(c)
+		_, err = context.RunCommand(c)
 		if err != nil {
 			utils.ExitOnError(err)
 		}
