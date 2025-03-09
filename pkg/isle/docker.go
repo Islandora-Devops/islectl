@@ -15,13 +15,13 @@ import (
 )
 
 type DockerClient struct {
-	CLI     *client.Client
-	sshConn *ssh.Client
+	CLI    *client.Client
+	SshCli *ssh.Client
 }
 
 func (d *DockerClient) Close() error {
-	if d.sshConn != nil {
-		return d.sshConn.Close()
+	if d.SshCli != nil {
+		return d.SshCli.Close()
 	}
 	return nil
 }
@@ -66,8 +66,8 @@ func GetDockerCli(activeCtx *config.Context) *DockerClient {
 	}
 
 	return &DockerClient{
-		CLI:     cli,
-		sshConn: sshConn,
+		CLI:    cli,
+		SshCli: sshConn,
 	}
 }
 
@@ -102,4 +102,19 @@ func GetConfigEnv(ctx context.Context, cli *client.Client, containerName, envNam
 	}
 
 	return "", nil
+}
+
+func (cli *DockerClient) GetServiceIp(ctx context.Context, c *config.Context, containerName string) (string, error) {
+	containerJSON, err := cli.CLI.ContainerInspect(ctx, containerName)
+	if err != nil {
+		return "", fmt.Errorf("error inspecting container %q: %v", containerName, err)
+	}
+
+	networkName := fmt.Sprintf("%s_default", c.ProjectName)
+	network, ok := containerJSON.NetworkSettings.Networks[networkName]
+	if !ok {
+		return "", fmt.Errorf("network %q not found in container %q", networkName, containerName)
+	}
+
+	return network.IPAddress, nil
 }

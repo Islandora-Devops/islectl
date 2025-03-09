@@ -12,18 +12,19 @@ Usage:
   islectl [command]
 
 Available Commands:
-  build       Build the Drupal container.
-  completion  Generate the autocompletion script for the specified shell
-  config      Manage ISLE command configuration
-  create      Create ISLE resources
-  down        Run docker compose down
-  drush       Run drush commands on ISLE contexts
-  exec        exec into compose services running in ISLE contexts
-  help        Help about any command
-  make        Run custom make commands
-  pull        Fetches the latest images from the registry.
-  sequelace   Connect to your ISLE database using Sequel Ace (Mac OS only)
-  up          Brings up the containers
+  build        Build the Drupal container.
+  completion   Generate the autocompletion script for the specified shell
+  config       Manage ISLE command configuration
+  create       Create ISLE resources
+  down         Run docker compose down
+  drush        Run drush commands on ISLE contexts
+  exec         exec into compose services running in ISLE contexts
+  help         Help about any command
+  make         Run custom make commands
+  port-forward Forward one or more local ports to a service
+  pull         Fetches the latest images from the registry.
+  sequelace    Connect to your ISLE database using Sequel Ace (Mac OS only)
+  up           Brings up the containers
 
 Flags:
       --context string     The ISLE context to use. See islectl config --help for more info (default "dev")
@@ -35,6 +36,32 @@ Flags:
 Each command has a `--help` flag that provide what flags can be passed to the given command.
 
 Some of the commands are self-evident with the name of the command and the description in `--help`. For those that need some more information, you can find that below:
+
+### port-forward
+
+Access remote context docker service ports.
+
+For docker services running in remote contexts that do not have ports exposed on the host VM, accessing those services can be tricky. The `islectl port-forward` command can help in these situations.
+
+As an example, from a local machine, accessing your `stage` context's traefik dashboard and solr admin UI could be done by running this command in the terminal
+
+```
+$ islectl port-forward \
+  8983:solr:8983 \
+  8080:traefik:8080 \
+  8161:activemq:8161 \
+  --context stage
+```
+
+Then, while leaving the terminal open, in your web browser you can vist
+
+http://localhost:8983/solr to see the solr admin UI
+http://localhost:8080/dashboard to see the traefik dashboard (assumming it's enabled in your config)
+http://localhost:8161/admin/queues.jsp to see ActiveMQ queues
+
+Be sure to run `Ctrl+c` in your terminal when you are done to close the connection.
+
+![port-forward command screencast](./assets/img/port-forward.gif)
 
 ### sequelace
 

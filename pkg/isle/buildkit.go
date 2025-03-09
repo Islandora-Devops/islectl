@@ -49,18 +49,11 @@ func GetUris(c *config.Context) (string, string, error) {
 	} else if c.DockerHostType == config.ContextRemote {
 		// on remote hosts we need to get the IP address
 		// mariadb is exposed at in the network namespace
-		containerJSON, err := cli.CLI.ContainerInspect(ctx, containerName)
+		serviceIp, err := cli.GetServiceIp(ctx, c, containerName)
 		if err != nil {
-			return "", "", fmt.Errorf("error inspecting container %q: %v", containerName, err)
+			return "", "", err
 		}
-
-		networkName := fmt.Sprintf("%s_default", c.ProjectName)
-		network, ok := containerJSON.NetworkSettings.Networks[networkName]
-		if !ok {
-			return "", "", fmt.Errorf("network %q not found in container %q", networkName, containerName)
-		}
-
-		mysqlUri = fmt.Sprintf("mysql://%s:%s@%s:%s/%s", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"], network.IPAddress, envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
+		mysqlUri = fmt.Sprintf("mysql://%s:%s@%s:%s/%s", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"], serviceIp, envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
 
 	}
 
