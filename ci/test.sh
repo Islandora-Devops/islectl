@@ -24,8 +24,7 @@ sleep 5
 
 ssh-keyscan -p 1234 localhost > ./ci/ssh/known_hosts
 
-./islectl create context \
-  --context-name foo \
+./islectl create context foo \
   --type remote \
   --profile dev \
   --project-dir /home/foo/isle \

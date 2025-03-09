@@ -109,13 +109,11 @@ var createConfigCmd = &cobra.Command{
 
 // createContextCmd creates an ISLE site and islectl context
 var createContextCmd = &cobra.Command{
-	Use:   "context",
+	Use:   "context [context-name]",
+	Args:  cobra.ExactArgs(1),
 	Short: "Create an ISLE site and islectl context.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cn, err := cmd.Flags().GetString("context-name")
-		if err != nil {
-			return err
-		}
+		cn := args[0]
 		cc, err := config.GetContext(cn)
 		if err != nil {
 			return err
@@ -207,15 +205,9 @@ func init() {
 	flags := createContextCmd.Flags()
 	config.SetCommandFlags(flags)
 	flags.Bool("yes", false, "Skip asking questions and just do the thing")
-	flags.String("context-name", "", "Name of the context")
 	flags.String("buildkit-tag", "main", "isle-buildkit tag to install")
 	flags.String("starter-site", "main", "starter-site to install")
 	flags.Bool("default", false, "set to default context")
-
-	err := createContextCmd.MarkFlagRequired("context-name")
-	if err != nil {
-		slog.Error("Could not set context-name flag as required", "err", err)
-	}
 
 	createCmd.AddCommand(createContextCmd)
 
