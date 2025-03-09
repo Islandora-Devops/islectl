@@ -67,7 +67,7 @@ You can install an ISLE site on your local machine or a remote server with the c
 
 #### Create a local context
 
-Below is an example command that will install an ISLE site at `/home/vivek/isle`
+Below is an example command that will install an ISLE site on your local machine at `/home/vivek/isle`
 
 ```
 $ islectl create context dev \
@@ -79,7 +79,7 @@ $ islectl create context dev \
 
 #### Create a remote context
 
-Below is an example command that will install an ISLE on the server `islandora.YOUR-INSTITUTION.edu`. It assumes you can SSH into that server on port 22 with the SSH key at `$HOME/.ssh/id_rsa` with the remote user `vivek`. Change the flags to match your local environment and see `islectl create context --help` for more information.
+Below is an example command that will install an ISLE site on the server `islandora.YOUR-INSTITUTION.edu`. It assumes you can SSH into that server on port 22 with the SSH key at `$HOME/.ssh/id_rsa` with the remote user `vivek`. Change the flags to match your local environment and see `islectl create context --help` for more information.
 
 ```
 $ islectl create context stage \
@@ -90,7 +90,7 @@ $ islectl create context stage \
   --ssh-hostname islandora.YOUR-INSTITUTION.edu \
   --ssh-port 22 \
   --ssh-user vivek \
-  --ssh-key $(pwd).ssh/id_rsa
+  --ssh-key $(pwd)/.ssh/id_rsa
 ```
 
 
@@ -110,6 +110,8 @@ islectl create config dev \
   --project-dir /Users/vivek/isle-site-template
 ```
 
+That creates a context for an ISLE site that has its `docker-compose.yml` at `/Users/vivek/isle-site-template`. It's also set as your default context since the `--default` flag was passed.
+
 #### Create a remote context
 
 For ISLE installs on remote servers, you can setup a remote context. An example command for that would be:
@@ -117,16 +119,16 @@ For ISLE installs on remote servers, you can setup a remote context. An example 
 ```bash
 islectl create config stage \
   --type remote \
-  --ssh-hostname isle.myinstitution.edu \
   --profile prod \
   --project-dir /path/to/your/isle/site/template/directory \
   --project-name custom-project-name \
+  --ssh-hostname isle.myinstitution.edu \
   --ssh-port 22 \
-  --env-file .env \
-  --env-file /path/to/another/.env \
-  --sudo=true
+  --ssh-user vivek \
+  --ssh-key $(pwd)/.ssh/id_rsa
 ```
 
+That creates a context for an ISLE site on the server `isle.myinstitution.edu`. It assumes you can SSH into that server on port 22 with the SSH key at `$HOME/.ssh/id_rsa` with the remote user `vivek`. Change the flags to match your local environment and see `islectl create config --help` for more information.
 
 ### Using different contexts
 
@@ -144,17 +146,18 @@ $ islectl config get-contexts
 The asterisk indicates `dev` will be used to run commands . So when running the `login` command, it will be ran against the `dev` context.
 
 ```bash
-$ islectl login
+$ islectl drush uli
 https://islandora.dev/user/reset/1/1741453534/JuSMZIM_aCvsJR7gMgOcUxHkEL-YDMVL1_klQoYxhkQ/login
 ```
 
 Though if the `--context` flag is passed the default contexet can be overriden.
+
 ```bash
-$ islectl login --context stage
+$ islectl drush uli --context stage
 https://isle.myinstitution.edu/user/reset/1/1741453647/cdscdsc-YDMVL1_mdwkpamc2/login
 ```
 
-The default context can also be switched permananetly with 
+The default context can also be switched back and forth for future `islectl` executions via
 
 ```
 islectl set-context stage
