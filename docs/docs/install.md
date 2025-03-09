@@ -61,24 +61,61 @@ Global Flags:
   -s, --site string      The name of the site. If yr not using multi-site don't worry about this. (default "default")
 ```
 
-### Creating a local context
+### Creating new ISLE sites
 
-For local or development ISLE installs, you can setup a local context.
+You can install an ISLE site on your local machine or a remote server with the command  `islectl create context [context-name]`. The command sets up `isle-site-template` and your `islectl` context for the install.
+
+#### Create a local context
+
+Below is an example command that will install an ISLE site at `/home/vivek/isle`
+
+```
+$ islectl create context dev \
+  --type local \
+  --profile dev \
+  --project-dir /home/vivek/isle \
+  --project-name isle
+```
+
+#### Create a remote context
+
+Below is an example command that will install an ISLE on the server `islandora.YOUR-INSTITUTION.edu`. It assumes you can SSH into that server on port 22 with the SSH key at `$HOME/.ssh/id_rsa` with the remote user `vivek`. Change the flags to match your local environment and see `islectl create context --help` for more information.
+
+```
+$ islectl create context stage \
+  --type remote \
+  --profile dev \
+  --project-dir /opt/islandora \
+  --project-name YOUR-INSITUTION \
+  --ssh-hostname islandora.YOUR-INSTITUTION.edu \
+  --ssh-port 22 \
+  --ssh-user vivek \
+  --ssh-key $(pwd).ssh/id_rsa
+```
+
+
+### Creating context(s) for existing installations
+
+If you already have sites based on isle-site-template running, you can configure `islectl` for them with `islectl create config [context-name]`
+
+#### Configure a local context
+
+For ISLE installs running on your local machine, you can create a local context. An example command for that would be:
 
 ```bash
-islectl config set-context dev \
+islectl create config dev \
   --type local \
   --default \
   --profile dev \
   --project-dir /Users/vivek/isle-site-template
 ```
 
-### Create a remote context
+#### Create a remote context
 
-For ISLE installs on remote servers, you can setup a remote context.
+For ISLE installs on remote servers, you can setup a remote context. An example command for that would be:
 
 ```bash
-islectl config set-context stage \
+islectl create config stage \
   --type remote \
   --ssh-hostname isle.myinstitution.edu \
   --profile prod \
@@ -89,6 +126,7 @@ islectl config set-context stage \
   --env-file /path/to/another/.env \
   --sudo=true
 ```
+
 
 ### Using different contexts
 

@@ -101,24 +101,27 @@ var setContextCmd = &cobra.Command{
 	Use:   "set-context [context-name]",
 	Short: "Set or update properties of a context. Creates a new context if it does not exist.",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		f := cmd.Flags()
-		cc, err := config.LoadFromFlags(f)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		context, err := config.GetContext(args[0])
 		if err != nil {
-			fmt.Printf("Error reading default flag: %v\n", err)
-			return
+			return err
+		}
+
+		f := cmd.Flags()
+		cc, err := config.LoadFromFlags(f, context)
+		if err != nil {
+			return err
 		}
 		cc.Name = args[0]
 
 		defaultContext, err := f.GetBool("default")
 		if err != nil {
-			fmt.Printf("Error reading default flag: %v\n", err)
-			return
+			return err
 		}
 
 		// override local defaults for remote environments
 		if cc.DockerHostType == config.ContextRemote {
-			cc.VerifyRemoteInput()
+			cc.VerifyRemoteInput(true)
 		} else if cc.DockerHostType == config.ContextLocal {
 			cc.SSHKeyPath = ""
 			cc.DockerSocket = config.GetDefaultLocalDockerSocket(cc.DockerSocket)
@@ -130,6 +133,8 @@ var setContextCmd = &cobra.Command{
 		if err = config.SaveContext(cc, defaultContext); err != nil {
 			utils.ExitOnError(err)
 		}
+
+		return nil
 	},
 }
 

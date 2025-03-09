@@ -95,6 +95,22 @@ func ContextExists(name string) (bool, error) {
 	return false, nil
 }
 
+func GetContext(name string) (Context, error) {
+	ctx := Context{Name: name}
+	c, err := Load()
+	if err != nil {
+		return ctx, err
+	}
+
+	for _, context := range c.Contexts {
+		if strings.EqualFold(context.Name, name) {
+			return context, nil
+		}
+	}
+
+	return ctx, nil
+}
+
 func Save(cfg *Config) error {
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -113,6 +129,15 @@ func Current() (string, error) {
 	}
 
 	return cfg.CurrentContext, nil
+}
+
+func (context Context) String() (string, error) {
+	out, err := yaml.Marshal(context)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse context: %v", err)
+	}
+
+	return string(out), nil
 }
 
 func SaveContext(ctx *Context, setDefault bool) error {
@@ -190,8 +215,10 @@ func GetInput(question ...string) (string, error) {
 	return input, nil
 }
 
-func LoadFromFlags(f *pflag.FlagSet) (*Context, error) {
+func LoadFromFlags(f *pflag.FlagSet, context Context) (*Context, error) {
 	t := reflect.TypeOf(Context{})
+	exists := context.DockerSocket != ""
+	slog.Debug("Loading context from flags", "exists", exists)
 	m := make(map[string]interface{}, t.NumField())
 	for i := range t.NumField() {
 		field := t.Field(i)
@@ -200,6 +227,13 @@ func LoadFromFlags(f *pflag.FlagSet) (*Context, error) {
 			continue
 		}
 		tag = strings.Split(tag, ",")[0]
+
+		// if we're loading flags for an existing context
+		// do not add default values
+		if exists && !f.Changed(tag) {
+			continue
+		}
+
 		var value interface{}
 		switch field.Type.Kind() {
 		case reflect.Bool:
@@ -231,6 +265,7 @@ func LoadFromFlags(f *pflag.FlagSet) (*Context, error) {
 			value = v
 		}
 
+		slog.Debug("Setting tag", "tag", tag, "value", value)
 		m[tag] = value
 	}
 
@@ -239,7 +274,7 @@ func LoadFromFlags(f *pflag.FlagSet) (*Context, error) {
 		return nil, err
 	}
 
-	var cc Context
+	cc := context
 	if err := yaml.Unmarshal(data, &cc); err != nil {
 		return nil, err
 	}
@@ -399,12 +434,17 @@ func (c *Context) ProjectDirExists() (bool, error) {
 	return true, nil
 }
 
-func (cc *Context) VerifyRemoteInput() {
+func (cc *Context) VerifyRemoteInput(existingSite bool) {
 	if cc.SSHHostname == "islandora.dev" {
 		question := []string{
 			"You should not be setting SSH hostname to islandora.dev",
 			"You may have forgot to pass --ssh-hostname",
 			"Instead you can enter the remote server domain name here: ",
+		}
+		if existingSite {
+			question = []string{
+				"What is the hostname the site is installed at? (e.g. isle.example.com): ",
+			}
 		}
 		h, err := GetInput(question...)
 		if err != nil || h == "" {
@@ -421,8 +461,18 @@ func (cc *Context) VerifyRemoteInput() {
 			os.Exit(1)
 		}
 		cc.SSHUser = u.Username
-		slog.Warn("You may need to pass --ssh-user for the remote host.")
-		slog.Warn("Defaulting to your username to connect to the remote host", "name", u.Username)
+		question := []string{
+			fmt.Sprintf("What username do you use to SSH into %s? [%s]: ", cc.SSHHostname, u.Username),
+		}
+		un, err := GetInput(question...)
+		if err != nil {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		if un != "" {
+			cc.SSHUser = un
+		}
+
 	}
 
 	if cc.SSHPort == 2222 {
@@ -430,6 +480,12 @@ func (cc *Context) VerifyRemoteInput() {
 			"You may have forgot to pass --ssh-port",
 			"The default value is 2222, which is a good default for local contexts",
 			"You can enter the port to connect to [2222]: ",
+		}
+		if existingSite {
+			question = []string{
+				fmt.Sprintf("If you use a non-standard port to connect to %s over SSH enter it here: [22]: ", cc.SSHHostname),
+			}
+			cc.SSHPort = 22
 		}
 		p, err := GetInput(question...)
 		if err != nil {
@@ -446,11 +502,49 @@ func (cc *Context) VerifyRemoteInput() {
 			cc.SSHPort = uint(port)
 		}
 	}
+	if cc.SSHKeyPath == "" {
+		cc.SSHKeyPath = filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
+		question := []string{
+			"Path to your SSH private key",
+			fmt.Sprintf("Used when you run ssh %s@%s", cc.SSHUser, cc.SSHHostname),
+			fmt.Sprintf("Enter the full path here [%s]: ", cc.SSHKeyPath),
+		}
+		k, err := GetInput(question...)
+		if err != nil {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		if k != "" {
+			cc.SSHKeyPath = k
+		}
+		_, err = os.Stat(cc.SSHKeyPath)
+		if os.IsNotExist(err) {
+			fmt.Println("File does not exist: ", cc.SSHKeyPath)
+			os.Exit(1)
+		} else if err != nil {
+			fmt.Println("Could not determine if key exists")
+			os.Exit(1)
+		}
+	}
+
+	sshClient, err := cc.DialSSH()
+	if err != nil {
+		fmt.Println("SSH config does not seem correct", err)
+		os.Exit(1)
+	}
+	sshClient.Close()
+	fmt.Println("Tested SSH connection OK!")
 
 	if cc.Profile == "dev" {
 		question := []string{
 			"Are you sure you want \"dev\" for the docker compose profile on the remote context?",
 			"Enter the profile here, enter nothing to keep dev: [dev]: ",
+		}
+		if existingSite {
+			question = []string{
+				"What docker compose profile do you use? [prod]: ",
+			}
+			cc.Profile = "prod"
 		}
 		p, err := GetInput(question...)
 		if err != nil {
@@ -462,6 +556,22 @@ func (cc *Context) VerifyRemoteInput() {
 			cc.Profile = p
 		}
 	}
+
+	if cc.ProjectName == "isle-site-template" {
+		question := []string{
+			"What is the docker compose project name (COMPOSE_PROJECT_NAME in your .env)? [isle-site-template]: ",
+		}
+		pn, err := GetInput(question...)
+		if err != nil {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		if pn != "" {
+			cc.ProjectName = pn
+		}
+
+	}
+
 }
 
 func (c *Context) UploadFile(source, destination string) error {

@@ -108,7 +108,8 @@ func TestLoadFromFlags(t *testing.T) {
 		t.Fatalf("Error parsing flags: %v", err)
 	}
 
-	ctx, err := LoadFromFlags(flags)
+	c := Context{}
+	ctx, err := LoadFromFlags(flags, c)
 	if err != nil {
 		t.Fatalf("Error loading from flags: %v", err)
 	}
