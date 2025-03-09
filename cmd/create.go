@@ -25,18 +25,20 @@ var createConfigCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Short: "Create an islectl config for existing ISLE installs.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		f := cmd.Flags()
-		context, err := config.LoadFromFlags(f)
+		cc, err := config.GetContext(args[0])
 		if err != nil {
 			return err
 		}
 
+		cexists := cc.DockerSocket != ""
+
+		f := cmd.Flags()
+		context, err := config.LoadFromFlags(f, cc)
+		if err != nil {
+			return err
+		}
 		context.Name = args[0]
 
-		cexists, err := config.ContextExists(context.Name)
-		if err != nil {
-			return err
-		}
 		if cexists {
 			overwrite, err := config.GetInput("The context already exists. Do you want to overwrite it? [y/N]: ")
 			if err != nil {
@@ -69,8 +71,11 @@ var createConfigCmd = &cobra.Command{
 
 		if context.DockerHostType == config.ContextRemote {
 			context.VerifyRemoteInput(true)
+		} else {
+			if !f.Changed("docker-socket") {
+				context.DockerSocket = config.GetDefaultLocalDockerSocket(context.DockerSocket)
+			}
 		}
-
 		exists, err := context.ProjectDirExists()
 		if err != nil {
 			return err
@@ -107,18 +112,23 @@ var createContextCmd = &cobra.Command{
 	Use:   "context",
 	Short: "Create an ISLE site and islectl context.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		f := cmd.Flags()
-		context, err := config.LoadFromFlags(f)
+		cn, err := cmd.Flags().GetString("context-name")
 		if err != nil {
 			return err
 		}
+		cc, err := config.GetContext(cn)
+		if err != nil {
+			return err
+		}
+
+		f := cmd.Flags()
+		context, err := config.LoadFromFlags(f, cc)
+		if err != nil {
+			return err
+		}
+		context.Name = cn
 
 		trustFlags, err := cmd.Flags().GetBool("yes")
-		if err != nil {
-			return err
-		}
-
-		context.Name, err = cmd.Flags().GetString("context-name")
 		if err != nil {
 			return err
 		}
