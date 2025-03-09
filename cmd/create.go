@@ -53,6 +53,10 @@ var createConfigCmd = &cobra.Command{
 			return err
 		}
 		if t != "" {
+			if t != "remote" && t != "local" {
+				fmt.Printf("Unknown context type (%s). Valid values are local or remote\n", t)
+				os.Exit(1)
+			}
 			context.DockerHostType = config.ContextType(t)
 		}
 		dir, err := config.GetInput(fmt.Sprintf("Full directory path to the project (directory where docker-compose.yml is located) [%s]: ", context.ProjectDir))
@@ -86,6 +90,13 @@ var createConfigCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		contextStr, err := context.String()
+		if err != nil {
+			return err
+		}
+		fmt.Println("\nContext created successfully")
+		fmt.Println(contextStr)
 
 		return nil
 	},
@@ -128,6 +139,10 @@ var createContextCmd = &cobra.Command{
 				return err
 			}
 			if t != "" {
+				if t != "remote" && t != "local" {
+					fmt.Printf("Unknown context type (%s). Valid values are local or remote\n", t)
+					os.Exit(1)
+				}
 				context.DockerHostType = config.ContextType(t)
 			}
 			dir, err := config.GetInput(fmt.Sprintf("Where would you like to install the project? [%s]: ", context.ProjectDir))

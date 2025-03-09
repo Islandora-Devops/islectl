@@ -115,6 +115,15 @@ func Current() (string, error) {
 	return cfg.CurrentContext, nil
 }
 
+func (context Context) String() (string, error) {
+	out, err := yaml.Marshal(context)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse context: %v", err)
+	}
+
+	return string(out), nil
+}
+
 func SaveContext(ctx *Context, setDefault bool) error {
 	cfg, err := Load()
 	if err != nil {

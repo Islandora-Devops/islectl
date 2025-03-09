@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/islandora-devops/islectl/pkg/config"
-	yaml "gopkg.in/yaml.v3"
 )
 
 func GetUris(c *config.Context) (string, string, error) {
@@ -61,13 +60,12 @@ func GetUris(c *config.Context) (string, string, error) {
 }
 
 func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss string) error {
-	out, err := yaml.Marshal(context)
+	contextStr, err := context.String()
 	if err != nil {
-		slog.Error("Unable to parse context")
 		return err
 	}
 	fmt.Println("\nHere is the context that will be created")
-	fmt.Println(string(out))
+	fmt.Println(contextStr)
 
 	fmt.Println("\nAnd these buildkit/starter site flags")
 	flags := []string{
