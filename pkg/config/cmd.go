@@ -17,38 +17,42 @@ import (
 	"golang.org/x/term"
 )
 
-func (c *Context) RunCommand(cmd *exec.Cmd, input ...string) error {
+func (c *Context) RunCommand(cmd *exec.Cmd) ([]string, error) {
+	var output []string
 	if c.DockerHostType == ContextLocal {
 		cmd.Env = os.Environ()
 		cmd.Stdin = os.Stdin
 		stdoutPipe, err := cmd.StdoutPipe()
 		if err != nil {
-			return fmt.Errorf("error writing to stdout command %s: %v", cmd.String(), err)
+			return nil, fmt.Errorf("error writing to stdout command %s: %v", cmd.String(), err)
 		}
 		cmd.Stderr = os.Stderr
 
 		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("error starting command %s: %v", cmd.String(), err)
+			return nil, fmt.Errorf("error starting command %s: %v", cmd.String(), err)
 		}
 
 		scanner := bufio.NewScanner(stdoutPipe)
 		for scanner.Scan() {
-			fmt.Println(scanner.Text())
+			t := scanner.Text()
+			fmt.Println(t)
+			output = append(output, strings.TrimSpace(t))
 		}
 		if err := scanner.Err(); err != nil {
 			slog.Error("Error reading stdout", "err", err)
 		}
 
 		if err := cmd.Wait(); err != nil {
-			return fmt.Errorf("error running command %s: %v", cmd.String(), err)
+			return nil, fmt.Errorf("error running command %s: %v", cmd.String(), err)
 		}
 
-		return nil
+		return output, nil
 	}
 
+	// at this point, we know it's a remote context
 	sshClient, err := c.DialSSH()
 	if err != nil {
-		return fmt.Errorf("error establishing SSH connection: %v", err)
+		return nil, fmt.Errorf("error establishing SSH connection: %v", err)
 	}
 	defer sshClient.Close()
 
@@ -58,8 +62,8 @@ func (c *Context) RunCommand(cmd *exec.Cmd, input ...string) error {
 	if c.RunSudo {
 		remoteCmd += " sudo"
 	}
-	// just get the binary name since local/remote paths are probably not the same
-	remoteCmd += " " + filepath.Base(cmd.Path)
+
+	remoteCmd += " " + cmd.Args[0]
 	if len(cmd.Args) > 1 {
 		remoteCmd += " " + shellquote.Join(cmd.Args[1:]...)
 	}
@@ -68,38 +72,44 @@ func (c *Context) RunCommand(cmd *exec.Cmd, input ...string) error {
 
 	session, err := sshClient.NewSession()
 	if err != nil {
-		return fmt.Errorf("error creating SSH session: %v", err)
+		return nil, fmt.Errorf("error creating SSH session: %v", err)
 	}
 	defer session.Close()
 
+	// create a pseudo terminal incase the command needs input
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          0,
 		ssh.ECHOCTL:       0,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
-	if err := session.RequestPty("xterm", 80, 40, modes); err != nil {
-		return fmt.Errorf("error requesting pseudo terminal: %w", err)
+	width, height, err := term.GetSize(int(os.Stdin.Fd()))
+	if err != nil {
+		width = 80
+		height = 40
+	}
+	if err := session.RequestPty("xterm", width, height, modes); err != nil {
+		return nil, fmt.Errorf("error requesting pseudo terminal: %w", err)
 	}
 
 	// Prepare stdin pipe for the session.
 	stdinPipe, err := session.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stdin pipe: %v", err)
+		return nil, fmt.Errorf("error creating stdin pipe: %v", err)
 	}
 	stdoutPipe, err := session.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("error obtaining stdout pipe: %v", err)
+		return nil, fmt.Errorf("error obtaining stdout pipe: %v", err)
 	}
 	stderrPipe, err := session.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("error obtaining stderr pipe: %v", err)
+		return nil, fmt.Errorf("error obtaining stderr pipe: %v", err)
 	}
 	combined := io.MultiReader(stdoutPipe, stderrPipe)
 
 	// Start the remote command.
 	if err := session.Start(remoteCmd); err != nil {
-		return fmt.Errorf("error starting remote command %q: %v", remoteCmd, err)
+		return nil, fmt.Errorf("error starting remote command %q: %v", remoteCmd, err)
 	}
 
 	buf := make([]byte, 1024)
@@ -107,9 +117,10 @@ func (c *Context) RunCommand(cmd *exec.Cmd, input ...string) error {
 	for {
 		n, err := combined.Read(buf)
 		if n > 0 {
-			output := string(buf[:n])
-			fmt.Print(output)
-			if !prompted && strings.Contains(output, "[sudo] password for") {
+			line := string(buf[:n])
+			fmt.Print(line)
+			output = append(output, line)
+			if !prompted && strings.Contains(line, "[sudo] password for") {
 				prompted = true
 				pwd, err := promptPassword()
 				if err != nil {
@@ -130,9 +141,10 @@ func (c *Context) RunCommand(cmd *exec.Cmd, input ...string) error {
 	stdinPipe.Close()
 	// Wait for the remote command to complete.
 	if err := session.Wait(); err != nil {
-		return fmt.Errorf("error running remote command %q: %v", remoteCmd, err)
+		return nil, fmt.Errorf("error running remote command %q: %v", remoteCmd, err)
 	}
-	return nil
+
+	return output, nil
 }
 
 func promptPassword() (string, error) {

@@ -15,7 +15,6 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "islectl",
 	Short: "Interact with your ISLE site",
-	Long:  `Interact with your ISLE site`,
 }
 
 func Execute() {
@@ -35,5 +34,5 @@ func init() {
 		slog.Error("Unable to fetch current context", "err", err)
 	}
 
-	rootCmd.PersistentFlags().StringP("context", "c", c, "The ISLE context to use. See islectl config --help for more info")
+	rootCmd.PersistentFlags().String("context", c, "The ISLE context to use. See islectl config --help for more info")
 }

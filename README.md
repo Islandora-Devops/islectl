@@ -15,6 +15,7 @@ Documentation is available at https://islandora-devops.github.io/islectl/
 ## TODO
 
 - [x] Implement `make up` Brings up the containers or builds starter if no containers were found.
+  - Now `islectl up` for existing sites. Use `islectl create-site` to create a new site
 - [ ] Implement `make starter` Make a local site with codebase directory bind mounted, using starter site unless other package specified in .env or present already.
 - [ ] Implement `starter_dev` Make a local site with codebase directory bind mounted, using cloned starter site.
 - [x] Implement `make pull` Fetches the latest images from the registry.
@@ -24,11 +25,14 @@ Documentation is available at https://islandora-devops.github.io/islectl/
 - [ ] Implement `make env` Pull in changes to the .env file.
 - [ ] Implement `make set_admin_password` Sets the Drupal admin password and accomodates for permissions restrictions to the secrets directory. Only runs sudo when needed.
 - [ ] Implement `make clean` Destroys everything beware!
-- [ ] Implement `make config-export` Exports the sites configuration.
-- [ ] Implement `make config-import` Import the sites configuration. N.B You may need to run this multiple times in succession due to errors in the configurations dependencies.
+- [x] Implement `make config-export` Exports the sites configuration.
+  - Now `islectl drush cex`
+- [x] Implement `make config-import` Import the sites configuration. N.B You may need to run this multiple times in succession due to errors in the configurations dependencies.
+  - Now `islectl drush cim`
 - [ ] Implement `make demo_content` Helper function for demo sites: do a workbench import of sample objects
 - [ ] Implement `make hydrate` Reconstitute the site from environment variables.
 - [x] Implement `make login` Runs "drush uli" to provide a direct login link for user 1
+  - Now `islectl drush uli` with an optional `--uid` flag and automatically opens link from terminal
 - [ ] Implement `make secrets_warning` Check to see if the secrets directory contains default secrets.
 - [ ] Implement `make fix_masonry` Fix missing masonry library.
 - [ ] Implement `make fix_views` This fixes a know issues with views when using the make local build. The error must be triggered before this will work.

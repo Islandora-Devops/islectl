@@ -120,7 +120,7 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 
 	// need to cd into the base dir of the project
 	context.ProjectDir = filepath.Dir(context.ProjectDir)
-	if err = context.RunCommand(c); err != nil {
+	if _, err = context.RunCommand(c); err != nil {
 		slog.Error("Error installing site", "err", err)
 		os.Exit(1)
 	}

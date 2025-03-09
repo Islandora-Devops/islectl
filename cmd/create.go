@@ -16,7 +16,7 @@ import (
 
 // createCmd brings an ISLE site online
 var createCmd = &cobra.Command{
-	Use:   "create",
+	Use:   "create-site",
 	Short: "Create an ISLE site and its islectl context.",
 	Run: func(cmd *cobra.Command, args []string) {
 		f := cmd.Flags()
