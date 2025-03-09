@@ -18,6 +18,7 @@ Available Commands:
   create-site Create an ISLE site and its islectl context.
   down        Run docker compose down
   drush       Run drush commands on ISLE contexts
+  exec        exec into compose services running in ISLE contexts
   help        Help about any command
   make        Run custom make commands
   pull        Fetches the latest images from the registry.
