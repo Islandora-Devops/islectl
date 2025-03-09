@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"log/slog"
@@ -324,6 +325,7 @@ func (c *Context) DialSSH() (*ssh.Client, error) {
 	}
 
 	knownHostsPath := filepath.Join(filepath.Dir(c.SSHKeyPath), "known_hosts")
+	slog.Debug("Setting known_hosts", "known_hosts", knownHostsPath)
 	hostKeyCallback, err := knownhosts.New(knownHostsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error creating known_hosts callback: %w", err)
@@ -341,6 +343,21 @@ func (c *Context) DialSSH() (*ssh.Client, error) {
 	sshAddr := fmt.Sprintf("%s:%d", c.SSHHostname, c.SSHPort)
 	client, err := ssh.Dial("tcp", sshAddr, sshConfig)
 	if err != nil {
+
+		var keyErr *knownhosts.KeyError
+		if errors.As(err, &keyErr) {
+			if len(keyErr.Want) == 0 {
+				fmt.Println("The host key for your remote context is not known.")
+				fmt.Println("This means your SSH known_hosts file doesn't have an entry for this host.")
+			} else {
+				fmt.Println("The host key for your remote context does not match the expected key.")
+				fmt.Println("This might indicate that the host's key has changed or that there could be a security issue.")
+				fmt.Println("Please verify the new key with your host administrator.")
+				fmt.Println("If the change is legitimate, update your known_hosts file by removing the old key and adding the new one.")
+			}
+			fmt.Printf("\nTry running `ssh -p %d -t %s@%s` and trying again\n\n", c.SSHPort, c.SSHUser, c.SSHHostname)
+
+		}
 		return nil, fmt.Errorf("error dialing SSH at %s: %w", sshAddr, err)
 	}
 

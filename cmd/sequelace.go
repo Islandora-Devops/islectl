@@ -6,10 +6,9 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"os/exec"
+	"runtime"
 
-	"github.com/islandora-devops/islectl/internal/utils"
 	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/islandora-devops/islectl/pkg/isle"
 
@@ -19,22 +18,27 @@ import (
 var sequelAceCmd = &cobra.Command{
 	Use:   "sequelace",
 	Short: "Connect to your ISLE database using Sequel Ace (Mac OS only)",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if runtime.GOOS != "darwin" {
+			return fmt.Errorf("sequelace is only supported on mac OS")
+		}
+
 		f := cmd.Flags()
 		context, err := config.CurrentContext(f)
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		sequelAcePath, err := f.GetString("sequel-ace-path")
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		mysql, ssh, err := isle.GetUris(context)
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
+		slog.Debug("uris", "mysql", mysql, "ssh", ssh)
 		cmdArgs := []string{
 			fmt.Sprintf("%s?%s", mysql, ssh),
 			"-a",
@@ -42,9 +46,11 @@ var sequelAceCmd = &cobra.Command{
 		}
 		openCmd := exec.Command("open", cmdArgs...)
 		if err := openCmd.Run(); err != nil {
-			slog.Error("Could not open sequelace.", "err", err)
-			os.Exit(1)
+			slog.Error("Could not open sequelace.")
+			return err
 		}
+
+		return nil
 	},
 }
 
