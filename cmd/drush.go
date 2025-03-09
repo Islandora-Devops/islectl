@@ -51,7 +51,10 @@ var drushCmd = &cobra.Command{
 		}
 
 		f := cmd.Flags()
-		f.Set("context", isleContext)
+		err = f.Set("context", isleContext)
+		if err != nil {
+			return err
+		}
 		context, err := config.CurrentContext(f)
 		if err != nil {
 			return err
