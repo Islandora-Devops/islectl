@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
-	"github.com/islandora-devops/islectl/internal/utils"
 	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/islandora-devops/islectl/pkg/isle"
 	"github.com/spf13/cobra"
@@ -19,25 +19,97 @@ var createCmd = &cobra.Command{
 	Short: "Create ISLE resources",
 }
 
+// createConfigCmd creates islectl config for existing isle-site-template installs
+var createConfigCmd = &cobra.Command{
+	Use:   "config [context-name]",
+	Args:  cobra.ExactArgs(1),
+	Short: "Create an islectl config for existing ISLE installs.",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		f := cmd.Flags()
+		context, err := config.LoadFromFlags(f)
+		if err != nil {
+			return err
+		}
+
+		context.Name = args[0]
+
+		cexists, err := config.ContextExists(context.Name)
+		if err != nil {
+			return err
+		}
+		if cexists {
+			overwrite, err := config.GetInput("The context already exists. Do you want to overwrite it? [y/N]: ")
+			if err != nil {
+				return err
+			}
+			if !strings.EqualFold(overwrite, "y") && !strings.EqualFold(overwrite, "yes") {
+				fmt.Println("Cancelling...")
+				os.Exit(1)
+			}
+		}
+
+		t, err := config.GetInput(fmt.Sprintf("Is the context local (on this machine) or remote (on a VM)? [%s]: ", string(context.DockerHostType)))
+		if err != nil {
+			return err
+		}
+		if t != "" {
+			context.DockerHostType = config.ContextType(t)
+		}
+		dir, err := config.GetInput(fmt.Sprintf("Full directory path to the project (directory where docker-compose.yml is located) [%s]: ", context.ProjectDir))
+		if err != nil {
+			return err
+		}
+		if dir != "" {
+			context.ProjectDir = dir
+		}
+
+		if context.DockerHostType == config.ContextRemote {
+			context.VerifyRemoteInput(true)
+		}
+
+		exists, err := context.ProjectDirExists()
+		if err != nil {
+			return err
+		}
+		if !exists {
+			slog.Error("Project directory does not exist. You may want to create a new site and context with `islectl create context`", "dir", context.ProjectDir, "err", err)
+			os.Exit(1)
+		}
+
+		defaultContext, err := f.GetBool("default")
+		if err != nil {
+			fmt.Printf("Error reading default flag: %v\n", err)
+			return err
+		}
+
+		err = config.SaveContext(context, defaultContext)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	},
+}
+
 // createContextCmd creates an ISLE site and islectl context
 var createContextCmd = &cobra.Command{
 	Use:   "context",
 	Short: "Create an ISLE site and islectl context.",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		f := cmd.Flags()
 		context, err := config.LoadFromFlags(f)
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		trustFlags, err := cmd.Flags().GetBool("yes")
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		context.Name, err = cmd.Flags().GetString("context-name")
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		if !trustFlags {
@@ -53,27 +125,27 @@ var createContextCmd = &cobra.Command{
 
 			t, err := config.GetInput(fmt.Sprintf("Is the context local or remote? [%s]: ", string(context.DockerHostType)))
 			if err != nil {
-				utils.ExitOnError(err)
+				return err
 			}
 			if t != "" {
 				context.DockerHostType = config.ContextType(t)
 			}
 			dir, err := config.GetInput(fmt.Sprintf("Where would you like to install the project? [%s]: ", context.ProjectDir))
 			if err != nil {
-				utils.ExitOnError(err)
+				return err
 			}
 			if dir != "" {
 				context.ProjectDir = dir
 			}
 
 			if context.DockerHostType == config.ContextRemote {
-				context.VerifyRemoteInput()
+				context.VerifyRemoteInput(false)
 			}
 		}
 
 		exists, err := context.ProjectDirExists()
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 		if exists {
 			slog.Error("Project directory exists. Must create a new directory", "dir", context.ProjectDir, "err", err)
@@ -82,26 +154,27 @@ var createContextCmd = &cobra.Command{
 
 		bt, err := cmd.Flags().GetString("buildkit-tag")
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		ss, err := cmd.Flags().GetString("starter-site")
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		defaultContext, err := f.GetBool("default")
 		if err != nil {
 			fmt.Printf("Error reading default flag: %v\n", err)
-			return
+			return err
 		}
 
 		err = isle.Setup(context, defaultContext, trustFlags, bt, ss)
 		if err != nil {
-			utils.ExitOnError(err)
+			return err
 		}
 
 		slog.Info(fmt.Sprintf("Creation succeed. You may want to run `islectl up --context %s`", context.Name))
+		return nil
 	},
 }
 
@@ -120,5 +193,12 @@ func init() {
 	}
 
 	createCmd.AddCommand(createContextCmd)
+
+	flags = createConfigCmd.Flags()
+	config.SetCommandFlags(flags)
+	flags.Bool("default", false, "set to default context")
+
+	createCmd.AddCommand(createConfigCmd)
+
 	rootCmd.AddCommand(createCmd)
 }

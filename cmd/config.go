@@ -118,7 +118,7 @@ var setContextCmd = &cobra.Command{
 
 		// override local defaults for remote environments
 		if cc.DockerHostType == config.ContextRemote {
-			cc.VerifyRemoteInput()
+			cc.VerifyRemoteInput(true)
 		} else if cc.DockerHostType == config.ContextLocal {
 			cc.SSHKeyPath = ""
 			cc.DockerSocket = config.GetDefaultLocalDockerSocket(cc.DockerSocket)

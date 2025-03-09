@@ -399,12 +399,17 @@ func (c *Context) ProjectDirExists() (bool, error) {
 	return true, nil
 }
 
-func (cc *Context) VerifyRemoteInput() {
+func (cc *Context) VerifyRemoteInput(existingSite bool) {
 	if cc.SSHHostname == "islandora.dev" {
 		question := []string{
 			"You should not be setting SSH hostname to islandora.dev",
 			"You may have forgot to pass --ssh-hostname",
 			"Instead you can enter the remote server domain name here: ",
+		}
+		if existingSite {
+			question = []string{
+				"What is the hostname the site is installed at? (e.g. isle.example.com): ",
+			}
 		}
 		h, err := GetInput(question...)
 		if err != nil || h == "" {
@@ -421,8 +426,18 @@ func (cc *Context) VerifyRemoteInput() {
 			os.Exit(1)
 		}
 		cc.SSHUser = u.Username
-		slog.Warn("You may need to pass --ssh-user for the remote host.")
-		slog.Warn("Defaulting to your username to connect to the remote host", "name", u.Username)
+		question := []string{
+			fmt.Sprintf("What username do you use to SSH into %s? [%s]: ", cc.SSHHostname, u.Username),
+		}
+		un, err := GetInput(question...)
+		if err != nil {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		if un != "" {
+			cc.SSHUser = un
+		}
+
 	}
 
 	if cc.SSHPort == 2222 {
@@ -430,6 +445,12 @@ func (cc *Context) VerifyRemoteInput() {
 			"You may have forgot to pass --ssh-port",
 			"The default value is 2222, which is a good default for local contexts",
 			"You can enter the port to connect to [2222]: ",
+		}
+		if existingSite {
+			question = []string{
+				fmt.Sprintf("If you use a non-standard port to connect to %s over SSH enter it here: [22]: ", cc.SSHHostname),
+			}
+			cc.SSHPort = 22
 		}
 		p, err := GetInput(question...)
 		if err != nil {
@@ -452,6 +473,12 @@ func (cc *Context) VerifyRemoteInput() {
 			"Are you sure you want \"dev\" for the docker compose profile on the remote context?",
 			"Enter the profile here, enter nothing to keep dev: [dev]: ",
 		}
+		if existingSite {
+			question = []string{
+				"What docker compose profile do you use? [prod]: ",
+			}
+			cc.Profile = "prod"
+		}
 		p, err := GetInput(question...)
 		if err != nil {
 			slog.Error("Error reading input")
@@ -462,6 +489,21 @@ func (cc *Context) VerifyRemoteInput() {
 			cc.Profile = p
 		}
 	}
+	if cc.ProjectName == "isle-site-template" {
+		question := []string{
+			"What is the docker compose project name (COMPOSE_PROJECT_NAME in your .env)? [isle-site-template]: ",
+		}
+		pn, err := GetInput(question...)
+		if err != nil {
+			slog.Error("Error reading input")
+			os.Exit(1)
+		}
+		if pn != "" {
+			cc.ProjectName = pn
+		}
+
+	}
+
 }
 
 func (c *Context) UploadFile(source, destination string) error {
