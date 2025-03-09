@@ -34,12 +34,14 @@ could be done by running this command in the terminal:
 islectl port-forward \
   8983:solr:8983 \
   8080:traefik:8080 \
+  8161:activemq:8161 \
   --context stage
 
-Then, while leaving the terminal open, in your web browser you can vist
+Then, while leaving the terminal open, in your web browser you can visit
 
 http://localhost:8983/solr to see the solr admin UI
-http://localhost:8080/dashboard to see the traefik dashboard (assumming it's enabled in your config)
+http://localhost:8080/dashboard to see the traefik dashboard (assuming it's enabled in your config)
+http://localhost:8161/admin/queues.jsp to see ActiveMQ queues
 
 Be sure to run Ctrl+c in your terminal when you are done to close the connection.
 `,
@@ -49,18 +51,18 @@ Be sure to run Ctrl+c in your terminal when you are done to close the connection
 		if err != nil {
 			return err
 		}
-
-		// if the context is local, only works on linux for now
 		if runtime.GOOS != "linux" && c.DockerHostType == config.ContextLocal {
 			return fmt.Errorf("port-forwarding on non-linux local contexts is not currently supported")
 		}
-
 		cli := isle.GetDockerCli(c)
 		defer cli.Close()
 
+		listeners := make([]net.Listener, 0, len(args))
 		done := make(chan os.Signal, 1)
 		signal.Notify(done, os.Interrupt, syscall.SIGTERM)
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		for _, arg := range args {
 			parts := strings.Split(arg, ":")
 			if len(parts) != 3 {
@@ -77,13 +79,12 @@ Be sure to run Ctrl+c in your terminal when you are done to close the connection
 				return fmt.Errorf("invalid remote port '%s': must be an integer", remotePortStr)
 			}
 
-			// make sure local port isn't being used
 			addr := fmt.Sprintf("localhost:%d", localPort)
-			ln, err := net.Listen("tcp", addr)
+			listener, err := net.Listen("tcp", addr)
 			if err != nil {
 				return fmt.Errorf("local port %d appears to be in use: %v", localPort, err)
 			}
-			ln.Close()
+			listeners = append(listeners, listener)
 
 			containerName := fmt.Sprintf("%s-%s-%s-1", c.ProjectName, service, c.Profile)
 			serviceIp, err := cli.GetServiceIp(ctx, c, containerName)
@@ -92,29 +93,28 @@ Be sure to run Ctrl+c in your terminal when you are done to close the connection
 			}
 
 			remoteEndpoint := fmt.Sprintf("%s:%d", serviceIp, remotePort)
-
-			go func(lp, remoteAddr string) {
-				listener, err := net.Listen("tcp", "localhost:"+lp)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "failed to listen on local port %s: %v\n", lp, err)
-					return
-				}
+			go func(listener net.Listener, lp, remoteAddr string) {
 				defer listener.Close()
 				fmt.Printf("Forwarding localhost:%s -> %s via SSH\n", lp, remoteAddr)
-
 				for {
 					localConn, err := listener.Accept()
 					if err != nil {
+						if strings.Contains(err.Error(), "use of closed network connection") {
+							return
+						}
 						fmt.Fprintf(os.Stderr, "error accepting connection on port %s: %v\n", lp, err)
 						return
 					}
 					go forward(cli.SshCli, localConn, remoteAddr)
 				}
-			}(localPortStr, remoteEndpoint)
+			}(listener, localPortStr, remoteEndpoint)
 		}
 
 		<-done
 		fmt.Println("Shutting down port forwards...")
+		for _, listener := range listeners {
+			listener.Close()
+		}
 		return nil
 	},
 }
