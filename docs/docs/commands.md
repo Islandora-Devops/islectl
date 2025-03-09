@@ -15,9 +15,10 @@ Available Commands:
   build       Build the Drupal container.
   completion  Generate the autocompletion script for the specified shell
   config      Manage ISLE command configuration
-  create-site Create an ISLE site and its islectl context.
+  create      Create ISLE resources
   down        Run docker compose down
   drush       Run drush commands on ISLE contexts
+  exec        exec into compose services running in ISLE contexts
   help        Help about any command
   make        Run custom make commands
   pull        Fetches the latest images from the registry.

@@ -14,10 +14,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createCmd brings an ISLE site online
 var createCmd = &cobra.Command{
-	Use:   "create-site",
-	Short: "Create an ISLE site and its islectl context.",
+	Use:   "create",
+	Short: "Create ISLE resources",
+}
+
+// createContextCmd creates an ISLE site and islectl context
+var createContextCmd = &cobra.Command{
+	Use:   "context",
+	Short: "Create an ISLE site and islectl context.",
 	Run: func(cmd *cobra.Command, args []string) {
 		f := cmd.Flags()
 		context, err := config.LoadFromFlags(f)
@@ -101,8 +106,7 @@ var createCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(createCmd)
-	flags := createCmd.Flags()
+	flags := createContextCmd.Flags()
 	config.SetCommandFlags(flags)
 	flags.Bool("yes", false, "Skip asking questions and just do the thing")
 	flags.String("context-name", "", "Name of the context")
@@ -110,8 +114,11 @@ func init() {
 	flags.String("starter-site", "main", "starter-site to install")
 	flags.Bool("default", false, "set to default context")
 
-	err := createCmd.MarkFlagRequired("context-name")
+	err := createContextCmd.MarkFlagRequired("context-name")
 	if err != nil {
 		slog.Error("Could not set context-name flag as required", "err", err)
 	}
+
+	createCmd.AddCommand(createContextCmd)
+	rootCmd.AddCommand(createCmd)
 }

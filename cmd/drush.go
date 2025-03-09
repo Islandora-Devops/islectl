@@ -20,6 +20,11 @@ var drushCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Args:               cobra.ArbitraryArgs,
 	Short:              "Run drush commands on ISLE contexts",
+	Long: `
+Short hand for "islectl exec drupal drush".
+
+This allows us to easily add additional features around common drush commands
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// since we're disabling flag parsing to make easy passing of flags to drush
 		// handle the context flag
