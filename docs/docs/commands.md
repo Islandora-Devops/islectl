@@ -36,6 +36,27 @@ Each command has a `--help` flag that provide what flags can be passed to the gi
 
 Some of the commands are self-evident with the name of the command and the description in `--help`. For those that need some more information, you can find that below:
 
+### port-forward
+
+Access remote context docker service ports.
+
+For docker services running in remote contexts that do not have ports exposed on the host VM, accessing those services can be tricky. The `islectl port-forward` command can help in these situations.
+
+As an example, from a local machine, accessing your `stage` context's traefik dashboard and solr admin UI could be done by running this command in the terminal
+
+```
+$ islectl port-forward 8983:solr:8983 8080:traefik:8080 --context stage
+```
+
+Then, while leaving the terminal open, in your web browser you can vist
+
+http://localhost:8983 to see the solr admin UI
+http://localhost:8080/dashboard to see the traefik dashboard (assumming it's enabled in your config)
+
+Be sure to run `Ctrl+c` in your terminal when you are done to close the connection.
+
+![port-forward command screencast](./assets/img/port-forward.gif)
+
 ### sequelace
 
 Open Sequel Ace and connect to your ISLE database (Mac OS only)
