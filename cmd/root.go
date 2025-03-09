@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/spf13/cobra"
@@ -15,6 +16,30 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "islectl",
 	Short: "Interact with your ISLE site",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		level := slog.LevelInfo
+		ll, err := cmd.Flags().GetString("log-level")
+		if err != nil {
+			return err
+		}
+
+		switch strings.ToUpper(ll) {
+		case "DEBUG":
+			level = slog.LevelDebug
+		case "WARN":
+			level = slog.LevelWarn
+		case "ERROR":
+			level = slog.LevelError
+		}
+
+		opts := &slog.HandlerOptions{
+			Level: level,
+		}
+		handler := slog.New(slog.NewTextHandler(os.Stdout, opts))
+		slog.SetDefault(handler)
+
+		return nil
+	},
 }
 
 func Execute() {
@@ -34,5 +59,10 @@ func init() {
 		slog.Error("Unable to fetch current context", "err", err)
 	}
 
+	ll := os.Getenv("LOG_LEVEL")
+	if ll == "" {
+		ll = "INFO"
+	}
 	rootCmd.PersistentFlags().String("context", c, "The ISLE context to use. See islectl config --help for more info")
+	rootCmd.PersistentFlags().String("log-level", ll, "The logging level for the command")
 }

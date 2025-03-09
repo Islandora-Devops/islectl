@@ -25,9 +25,10 @@ Available Commands:
   up          Brings up the containers
 
 Flags:
-      --context string   The ISLE context to use. See islectl config --help for more info (default "dev")
-  -h, --help             help for islectl
-  -v, --version          version for islectl
+      --context string     The ISLE context to use. See islectl config --help for more info (default "dev")
+  -h, --help               help for islectl
+      --log-level string   The logging level for the command (default "INFO")
+  -v, --version            version for islectl
 ```
 
 Each command has a `--help` flag that provide what flags can be passed to the given command.
@@ -43,10 +44,12 @@ Open Sequel Ace and connect to your ISLE database (Mac OS only)
 
 ### make
 
-Until all the isle-dc command have been migrated into this CLI, the current isle-dc make commands can be ran like so
+Until all the isle-dc command have been migrated into this CLI, the current isle-dc make commands can be ran like so*
 
 ```
-islectl make up --dir /path/to/islandora-devops/isle-dc 
+islectl make set_admin_password
 ```
 
-This `islectl make` command could also support any custom make commands that are not able to be implemented in this CLI. Would require the given make command to be compatible with the given docker compose project.
+This `islectl make` command could also support any custom make commands that are not able to be implemented in this CLI.*
+
+\* Would require the given make command to be compatible with ISLE site template assumptions
