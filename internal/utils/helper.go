@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -23,7 +24,8 @@ func OpenURL(url string) error {
 	case "linux":
 		cmd = exec.Command("xdg-open", url)
 	default:
-		return nil
+		return fmt.Errorf("unknown runtime command to open URL")
 	}
+
 	return cmd.Start()
 }

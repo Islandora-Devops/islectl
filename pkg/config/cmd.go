@@ -85,7 +85,8 @@ func (c *Context) RunCommand(cmd *exec.Cmd) ([]string, error) {
 	}
 	width, height, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
-		return nil, err
+		width = 80
+		height = 40
 	}
 	if err := session.RequestPty("xterm", width, height, modes); err != nil {
 		return nil, fmt.Errorf("error requesting pseudo terminal: %w", err)
