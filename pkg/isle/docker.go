@@ -3,12 +3,14 @@ package isle
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
 
 	dockercontainer "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/islandora-devops/islectl/pkg/config"
 	"golang.org/x/crypto/ssh"
@@ -17,6 +19,7 @@ import (
 // DockerAPI abstracts the Docker client functionality needed by our package.
 type DockerAPI interface {
 	ContainerInspect(ctx context.Context, container string) (dockercontainer.InspectResponse, error)
+	ContainerList(ctx context.Context, options dockercontainer.ListOptions) ([]dockercontainer.Summary, error)
 }
 
 type DockerClient struct {
@@ -117,4 +120,31 @@ func (d *DockerClient) GetServiceIp(ctx context.Context, c *config.Context, cont
 		return "", fmt.Errorf("network %q not found in container %q", networkName, containerName)
 	}
 	return network.IPAddress, nil
+}
+
+func (d *DockerClient) GetContainerName(c *config.Context, service string, neverPrefixProfile bool) (string, error) {
+	ctx := context.Background()
+
+	// Define the filters based on the Docker Compose labels.
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("label", "com.docker.compose.project="+c.ProjectName)
+	if c.Profile != "" && !neverPrefixProfile {
+		service = service + "-" + c.Profile
+	}
+	filterArgs.Add("label", "com.docker.compose.service="+service)
+
+	slog.Debug("Querying docker", "filters", filterArgs)
+	containers, err := d.CLI.ContainerList(ctx, dockercontainer.ListOptions{Filters: filterArgs})
+	if err != nil {
+		return "", err
+	}
+
+	// Print the container names.
+	for _, container := range containers {
+		for _, name := range container.Names {
+			return name, nil
+		}
+	}
+
+	return "", nil
 }

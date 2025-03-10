@@ -357,7 +357,6 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) error {
 	}
 
 	if testSsh {
-
 		sshClient, err := cc.DialSSH()
 		if err != nil {
 			return fmt.Errorf("ssh config does not seem correct: %v", err)
@@ -365,25 +364,22 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) error {
 		sshClient.Close()
 		fmt.Println("Tested SSH connection OK!")
 	}
+
 	if cc.Profile == "dev" {
 		question := []string{
 			"Are you sure you want \"dev\" for the docker compose profile on the remote context?",
-			"Enter the profile here, enter nothing to keep dev: [dev]: ",
+			"Enter the profile here, enter nothing if you are not using profiles: ",
 		}
 		if existingSite {
 			question = []string{
-				"What docker compose profile do you use? [prod]: ",
+				"Enter the name of the docker compose profile you're using (e.g. prod). Enter nothing if you're not using profiles: ",
 			}
-			cc.Profile = "prod"
 		}
 		p, err := GetInput(question...)
 		if err != nil {
 			return fmt.Errorf("error reading input")
 		}
-		if p != "" {
-			slog.Info("Setting profile", "profile", p)
-			cc.Profile = p
-		}
+		cc.Profile = p
 	}
 
 	if cc.ProjectName == "isle-site-template" {

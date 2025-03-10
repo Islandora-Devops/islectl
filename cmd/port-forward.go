@@ -89,7 +89,10 @@ Be sure to run Ctrl+c in your terminal when you are done to close the connection
 			}
 			listeners = append(listeners, listener)
 
-			containerName := fmt.Sprintf("%s-%s-%s-1", c.ProjectName, service, c.Profile)
+			containerName, err := cli.GetContainerName(c, service, false)
+			if err != nil {
+				return err
+			}
 			serviceIp, err := cli.GetServiceIp(ctx, c, containerName)
 			if err != nil {
 				return err
