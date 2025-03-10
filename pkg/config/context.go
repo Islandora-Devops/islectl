@@ -267,7 +267,8 @@ func (c *Context) ProjectDirExists() (bool, error) {
 	return true, nil
 }
 
-func (cc *Context) VerifyRemoteInput(existingSite bool) {
+func (cc *Context) VerifyRemoteInput(existingSite bool) error {
+	testSsh := false
 	if cc.SSHHostname == "islandora.dev" {
 		question := []string{
 			"You should not be setting SSH hostname to islandora.dev",
@@ -281,17 +282,16 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) {
 		}
 		h, err := GetInput(question...)
 		if err != nil || h == "" {
-			slog.Error("Error reading input")
-			os.Exit(1)
+			return fmt.Errorf("error reading input")
 		}
+		testSsh = true
 		cc.SSHHostname = h
 	}
 
 	if cc.SSHUser == "nginx" {
 		u, err := user.Current()
 		if err != nil {
-			slog.Error("Unable to determine current user", "err", err)
-			os.Exit(1)
+			return fmt.Errorf("unable to determine current user: %v", err)
 		}
 		cc.SSHUser = u.Username
 		question := []string{
@@ -299,13 +299,12 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) {
 		}
 		un, err := GetInput(question...)
 		if err != nil {
-			slog.Error("Error reading input")
-			os.Exit(1)
+			return fmt.Errorf("error reading input")
 		}
 		if un != "" {
+			testSsh = true
 			cc.SSHUser = un
 		}
-
 	}
 
 	if cc.SSHPort == 2222 {
@@ -322,20 +321,20 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) {
 		}
 		p, err := GetInput(question...)
 		if err != nil {
-			slog.Error("Error reading input")
-			os.Exit(1)
+			return fmt.Errorf("error reading input")
 		}
 		if p != "" {
 			port, err := strconv.Atoi(p)
 			if err != nil {
-				slog.Error("Unable to convert input to int")
-				os.Exit(1)
-
+				return fmt.Errorf("unable to convert port to an integer: %v", err)
 			}
 			cc.SSHPort = uint(port)
+			testSsh = true
 		}
 	}
 	if cc.SSHKeyPath == "" {
+		testSsh = true
+
 		cc.SSHKeyPath = filepath.Join(os.Getenv("HOME"), ".ssh", "id_rsa")
 		question := []string{
 			"Path to your SSH private key",
@@ -344,30 +343,28 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) {
 		}
 		k, err := GetInput(question...)
 		if err != nil {
-			slog.Error("Error reading input")
-			os.Exit(1)
+			return fmt.Errorf("error reading input")
 		}
 		if k != "" {
 			cc.SSHKeyPath = k
 		}
 		_, err = os.Stat(cc.SSHKeyPath)
 		if os.IsNotExist(err) {
-			fmt.Println("File does not exist: ", cc.SSHKeyPath)
-			os.Exit(1)
+			return fmt.Errorf("SSH key does not exist: %s", cc.SSHKeyPath)
 		} else if err != nil {
-			fmt.Println("Could not determine if key exists")
-			os.Exit(1)
+			return fmt.Errorf("could not determine if SSH key exists: %v", err)
 		}
 	}
 
-	sshClient, err := cc.DialSSH()
-	if err != nil {
-		fmt.Println("SSH config does not seem correct", err)
-		os.Exit(1)
-	}
-	sshClient.Close()
-	fmt.Println("Tested SSH connection OK!")
+	if testSsh {
 
+		sshClient, err := cc.DialSSH()
+		if err != nil {
+			return fmt.Errorf("ssh config does not seem correct: %v", err)
+		}
+		sshClient.Close()
+		fmt.Println("Tested SSH connection OK!")
+	}
 	if cc.Profile == "dev" {
 		question := []string{
 			"Are you sure you want \"dev\" for the docker compose profile on the remote context?",
@@ -381,8 +378,7 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) {
 		}
 		p, err := GetInput(question...)
 		if err != nil {
-			slog.Error("Error reading input")
-			os.Exit(1)
+			return fmt.Errorf("error reading input")
 		}
 		if p != "" {
 			slog.Info("Setting profile", "profile", p)
@@ -396,8 +392,7 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) {
 		}
 		pn, err := GetInput(question...)
 		if err != nil {
-			slog.Error("Error reading input")
-			os.Exit(1)
+			return fmt.Errorf("error reading input")
 		}
 		if pn != "" {
 			cc.ProjectName = pn
@@ -405,6 +400,7 @@ func (cc *Context) VerifyRemoteInput(existingSite bool) {
 
 	}
 
+	return nil
 }
 
 func (c *Context) UploadFile(source, destination string) error {

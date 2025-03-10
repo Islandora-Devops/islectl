@@ -70,7 +70,10 @@ var createConfigCmd = &cobra.Command{
 		}
 
 		if context.DockerHostType == config.ContextRemote {
-			context.VerifyRemoteInput(true)
+			err = cc.VerifyRemoteInput(true)
+			if err != nil {
+				return err
+			}
 		} else {
 			if !f.Changed("docker-socket") {
 				context.DockerSocket = config.GetDefaultLocalDockerSocket(context.DockerSocket)
@@ -162,7 +165,10 @@ var createContextCmd = &cobra.Command{
 			}
 
 			if context.DockerHostType == config.ContextRemote {
-				context.VerifyRemoteInput(false)
+				err = cc.VerifyRemoteInput(false)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
