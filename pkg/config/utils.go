@@ -43,7 +43,7 @@ func LoadFromFlags(f *pflag.FlagSet, context Context) (*Context, error) {
 	for i := range t.NumField() {
 		field := t.Field(i)
 		tag := field.Tag.Get("yaml")
-		if tag == "" || tag == "name" {
+		if tag == "" || tag == "name" || tag == "-" {
 			continue
 		}
 		tag = strings.Split(tag, ",")[0]

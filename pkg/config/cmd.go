@@ -23,6 +23,7 @@ func (c *Context) RunCommand(cmd *exec.Cmd) ([]string, error) {
 		cmd = exec.CommandContext(ctx, cmd.Path, cmd.Args[1:]...)
 		cmd.Env = os.Environ()
 		cmd.Stdin = os.Stdin
+		cmd.Dir = c.ProjectDir
 		stdoutPipe, err := cmd.StdoutPipe()
 		if err != nil {
 			return nil, fmt.Errorf("error creating stdout pipe for command %s: %v", cmd.String(), err)

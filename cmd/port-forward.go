@@ -54,7 +54,10 @@ Be sure to run Ctrl+c in your terminal when you are done to close the connection
 		if runtime.GOOS != "linux" && c.DockerHostType == config.ContextLocal {
 			return fmt.Errorf("port-forwarding on non-linux local contexts is not currently supported")
 		}
-		cli := isle.GetDockerCli(c)
+		cli, err := isle.GetDockerCli(c)
+		if err != nil {
+			return err
+		}
 		defer cli.Close()
 
 		listeners := make([]net.Listener, 0, len(args))

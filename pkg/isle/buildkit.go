@@ -16,12 +16,14 @@ import (
 )
 
 func GetUris(c *config.Context) (string, string, error) {
-	cli := GetDockerCli(c)
+	cli, err := GetDockerCli(c)
+	if err != nil {
+		return "", "", err
+	}
 
 	containerName := fmt.Sprintf("%s-mariadb-%s-1", c.ProjectName, c.Profile)
 	ctx := context.Background()
 
-	var err error
 	vars := []string{
 		"DB_ROOT_USER",
 		"DB_ROOT_PASSWORD",

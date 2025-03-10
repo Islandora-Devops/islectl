@@ -27,19 +27,25 @@ const (
 )
 
 type Context struct {
-	Name           string      `yaml:"name"`
-	DockerHostType ContextType `mapstructure:"type" yaml:"type"`
-	DockerSocket   string      `yaml:"docker-socket"`
-	ProjectName    string      `yaml:"project-name"`
-	Profile        string      `yaml:"profile"`
-	ProjectDir     string      `yaml:"project-dir"`
-	SSHUser        string      `yaml:"ssh-user"`
-	SSHHostname    string      `yaml:"ssh-hostname,omitempty"`
-	SSHPort        uint        `yaml:"ssh-port,omitempty"`
-	SSHKeyPath     string      `yaml:"ssh-key,omitempty"`
-	Site           string      `yaml:"site"`
-	EnvFile        []string    `yaml:"env-file"`
-	RunSudo        bool        `yaml:"sudo"`
+	Name              string                       `yaml:"name"`
+	DockerHostType    ContextType                  `mapstructure:"type" yaml:"type"`
+	DockerSocket      string                       `yaml:"docker-socket"`
+	ProjectName       string                       `yaml:"project-name"`
+	Profile           string                       `yaml:"profile"`
+	ProjectDir        string                       `yaml:"project-dir"`
+	SSHUser           string                       `yaml:"ssh-user"`
+	SSHHostname       string                       `yaml:"ssh-hostname,omitempty"`
+	SSHPort           uint                         `yaml:"ssh-port,omitempty"`
+	SSHKeyPath        string                       `yaml:"ssh-key,omitempty"`
+	Site              string                       `yaml:"site"`
+	EnvFile           []string                     `yaml:"env-file"`
+	RunSudo           bool                         `yaml:"sudo"`
+	ReadSmallFileFunc func(filename string) string `yaml:"-"`
+}
+
+// FileReader defines the behavior needed to read small files.
+type FileReader interface {
+	ReadSmallFile(path string) (string, error)
 }
 
 func ContextExists(name string) (bool, error) {
@@ -139,6 +145,10 @@ func CurrentContext(f *pflag.FlagSet) (*Context, error) {
 }
 
 func (c *Context) ReadSmallFile(filename string) string {
+	if c.ReadSmallFileFunc != nil {
+		return c.ReadSmallFileFunc(filename)
+	}
+
 	if c.DockerHostType == ContextLocal {
 		data, err := os.ReadFile(filename)
 		if err != nil {
