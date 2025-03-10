@@ -2,6 +2,7 @@ package isle
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -20,6 +21,10 @@ var _ DockerAPI = (*FakeDockerClient)(nil)
 
 func (f *FakeDockerClient) ContainerInspect(ctx context.Context, container string) (dockercontainer.InspectResponse, error) {
 	return f.InspectFunc(ctx, container)
+}
+
+func (f *FakeDockerClient) ContainerList(ctx context.Context, options dockercontainer.ListOptions) ([]dockercontainer.Summary, error) {
+	return nil, fmt.Errorf("Not implemented")
 }
 
 func TestGetConfigEnv_VariableFound(t *testing.T) {
