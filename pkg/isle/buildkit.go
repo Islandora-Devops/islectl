@@ -16,12 +16,14 @@ import (
 )
 
 func GetUris(c *config.Context) (string, string, error) {
-	cli := GetDockerCli(c)
+	cli, err := GetDockerCli(c)
+	if err != nil {
+		return "", "", err
+	}
 
 	containerName := fmt.Sprintf("%s-mariadb-%s-1", c.ProjectName, c.Profile)
 	ctx := context.Background()
 
-	var err error
 	vars := []string{
 		"DB_ROOT_USER",
 		"DB_ROOT_PASSWORD",
@@ -36,15 +38,17 @@ func GetUris(c *config.Context) (string, string, error) {
 		}
 	}
 
-	mysqlUri := fmt.Sprintf("mysql://%s:%s@%s:%s/%s", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"], envs["DB_MYSQL_HOST"], envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
-	sshUri := fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s&ssh_keyLocation=%s&ssh_keyLocationEnabled=1", c.SSHHostname, c.SSHPort, c.SSHUser, c.SSHKeyPath)
+	mysqlUri := fmt.Sprintf("mysql://%s:%s@", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"])
+	sshUri := fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s", c.SSHHostname, c.SSHPort, c.SSHUser)
 	if c.DockerHostType == config.ContextLocal {
 		containerName = fmt.Sprintf("%s-ide-1", c.ProjectName)
 		idePass, err := GetConfigEnv(ctx, cli.CLI, containerName, "CODE_SERVER_PASSWORD")
 		if err != nil {
 			return "", "", err
 		}
-		sshUri = fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s&ssh_password=%s", c.SSHHostname, c.SSHPort, c.SSHUser, idePass)
+		// for local contexts, we'll SSH into codeserver and use docker internal DNS to access mariadb
+		mysqlUri = mysqlUri + fmt.Sprintf("%s:%s/%s", envs["DB_MYSQL_HOST"], envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
+		sshUri = sshUri + fmt.Sprintf("&ssh_password=%s", idePass)
 	} else if c.DockerHostType == config.ContextRemote {
 		// on remote hosts we need to get the IP address
 		// mariadb is exposed at in the network namespace
@@ -52,8 +56,11 @@ func GetUris(c *config.Context) (string, string, error) {
 		if err != nil {
 			return "", "", err
 		}
-		mysqlUri = fmt.Sprintf("mysql://%s:%s@%s:%s/%s", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"], serviceIp, envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
 
+		// for remote contexts, we'll SSH into the remote server
+		// and use the docker network namespace IP:port for mariadb
+		mysqlUri = mysqlUri + fmt.Sprintf("%s:%s/%s", serviceIp, envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
+		sshUri = sshUri + fmt.Sprintf("&ssh_keyLocation=%s&ssh_keyLocationEnabled=1", c.SSHKeyPath)
 	}
 
 	return mysqlUri, sshUri, nil

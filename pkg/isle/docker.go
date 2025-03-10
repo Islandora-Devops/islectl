@@ -5,48 +5,54 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
+	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/islandora-devops/islectl/pkg/config"
 	"golang.org/x/crypto/ssh"
 )
 
+// DockerAPI abstracts the Docker client functionality needed by our package.
+type DockerAPI interface {
+	ContainerInspect(ctx context.Context, container string) (dockercontainer.InspectResponse, error)
+}
+
 type DockerClient struct {
-	CLI    *client.Client
-	SshCli *ssh.Client
+	CLI        DockerAPI
+	SshCli     *ssh.Client
+	httpClient *http.Client
 }
 
 func (d *DockerClient) Close() error {
+	var firstErr error
 	if d.SshCli != nil {
-		return d.SshCli.Close()
+		if err := d.SshCli.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
 	}
-	return nil
+	if d.httpClient != nil {
+		d.httpClient.CloseIdleConnections()
+	}
+	return firstErr
 }
 
-// GetDockerCli returns a DockerClient wrapper.
-// If the context is remote, it creates an SSH tunnel; otherwise, it uses the local Docker socket.
-func GetDockerCli(activeCtx *config.Context) *DockerClient {
+func GetDockerCli(activeCtx *config.Context) (*DockerClient, error) {
 	if activeCtx.DockerHostType == config.ContextLocal {
 		cli, err := client.NewClientWithOpts(
 			client.WithHost("unix://"+activeCtx.DockerSocket),
 			client.WithAPIVersionNegotiation(),
 		)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating local Docker client: %v\n", err)
-			os.Exit(1)
+			return nil, fmt.Errorf("error creating local Docker client: %v", err)
 		}
-		return &DockerClient{CLI: cli}
+		return &DockerClient{CLI: cli}, nil
 	}
-
 	sshConn, err := activeCtx.DialSSH()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error establishing SSH connection: %v\n", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("error establishing SSH connection: %v", err)
 	}
-
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return sshConn.Dial("unix", activeCtx.DockerSocket)
@@ -61,60 +67,54 @@ func GetDockerCli(activeCtx *config.Context) *DockerClient {
 		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating Docker client over SSH: %v\n", err)
-		os.Exit(1)
+		sshConn.Close()
+		return nil, fmt.Errorf("error creating Docker client over SSH: %v", err)
 	}
-
 	return &DockerClient{
-		CLI:    cli,
-		SshCli: sshConn,
-	}
+		CLI:        cli,
+		SshCli:     sshConn,
+		httpClient: httpClient,
+	}, nil
 }
 
-func GetSecret(ctx context.Context, cli *client.Client, c *config.Context, containerName, secret string) (string, error) {
+func GetSecret(ctx context.Context, cli DockerAPI, c *config.Context, containerName, secretName string) (string, error) {
 	containerJSON, err := cli.ContainerInspect(ctx, containerName)
 	if err != nil {
 		return "", err
 	}
-
-	expectedTarget := fmt.Sprintf("/run/secrets/%s", secret)
-	for _, mount := range containerJSON.HostConfig.Mounts {
-		if mount.Target == expectedTarget {
-			secret := filepath.Join(c.ProjectDir, "secrets", secret)
-			return c.ReadSmallFile(secret), nil
+	expectedTarget := filepath.Join("/run/secrets", secretName)
+	for _, mount := range containerJSON.Mounts {
+		if mount.Destination == expectedTarget {
+			secretFilePath := filepath.Join(c.ProjectDir, "secrets", secretName)
+			return c.ReadSmallFile(secretFilePath), nil
 		}
 	}
-
-	// if we didn't find the mounted secret, fall back to container default
-	return GetConfigEnv(ctx, cli, containerName, secret)
+	return GetConfigEnv(ctx, cli, containerName, secretName)
 }
 
-func GetConfigEnv(ctx context.Context, cli *client.Client, containerName, envName string) (string, error) {
+func GetConfigEnv(ctx context.Context, cli DockerAPI, containerName, envName string) (string, error) {
 	containerJSON, err := cli.ContainerInspect(ctx, containerName)
 	if err != nil {
 		return "", fmt.Errorf("error inspecting container %s: %v", containerName, err)
 	}
 	for _, env := range containerJSON.Config.Env {
-		line := strings.Split(env, "=")
-		if line[0] == envName {
-			return strings.Join(line[1:], "="), nil
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) == 2 && parts[0] == envName {
+			return parts[1], nil
 		}
 	}
-
-	return "", nil
+	return "", fmt.Errorf("environment variable %q not found in container %s", envName, containerName)
 }
 
-func (cli *DockerClient) GetServiceIp(ctx context.Context, c *config.Context, containerName string) (string, error) {
-	containerJSON, err := cli.CLI.ContainerInspect(ctx, containerName)
+func (d *DockerClient) GetServiceIp(ctx context.Context, c *config.Context, containerName string) (string, error) {
+	containerJSON, err := d.CLI.ContainerInspect(ctx, containerName)
 	if err != nil {
 		return "", fmt.Errorf("error inspecting container %q: %v", containerName, err)
 	}
-
 	networkName := fmt.Sprintf("%s_default", c.ProjectName)
 	network, ok := containerJSON.NetworkSettings.Networks[networkName]
 	if !ok {
 		return "", fmt.Errorf("network %q not found in container %q", networkName, containerName)
 	}
-
 	return network.IPAddress, nil
 }
