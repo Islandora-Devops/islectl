@@ -122,13 +122,13 @@ func (d *DockerClient) GetServiceIp(ctx context.Context, c *config.Context, cont
 	return network.IPAddress, nil
 }
 
-func (d *DockerClient) GetContainerName(c *config.Context, service string) (string, error) {
+func (d *DockerClient) GetContainerName(c *config.Context, service string, neverPrefixProfile bool) (string, error) {
 	ctx := context.Background()
 
 	// Define the filters based on the Docker Compose labels.
 	filterArgs := filters.NewArgs()
 	filterArgs.Add("label", "com.docker.compose.project="+c.ProjectName)
-	if c.Profile != "" {
+	if c.Profile != "" && !neverPrefixProfile {
 		service = service + "-" + c.Profile
 	}
 	filterArgs.Add("label", "com.docker.compose.service="+service)

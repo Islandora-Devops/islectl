@@ -21,7 +21,7 @@ func GetUris(c *config.Context) (string, string, error) {
 		return "", "", err
 	}
 
-	containerName, err := cli.GetContainerName(c, "mariadb")
+	containerName, err := cli.GetContainerName(c, "mariadb", false)
 	if err != nil {
 		return "", "", err
 	}
@@ -44,7 +44,7 @@ func GetUris(c *config.Context) (string, string, error) {
 	mysqlUri := fmt.Sprintf("mysql://%s:%s@", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"])
 	sshUri := fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s", c.SSHHostname, c.SSHPort, c.SSHUser)
 	if c.DockerHostType == config.ContextLocal {
-		containerName, err := cli.GetContainerName(c, "ide")
+		containerName, err := cli.GetContainerName(c, "ide", true)
 		if err != nil {
 			return "", "", err
 		}

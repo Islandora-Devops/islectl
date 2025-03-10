@@ -89,7 +89,7 @@ Be sure to run Ctrl+c in your terminal when you are done to close the connection
 			}
 			listeners = append(listeners, listener)
 
-			containerName, err := cli.GetContainerName(c, service)
+			containerName, err := cli.GetContainerName(c, service, false)
 			if err != nil {
 				return err
 			}
