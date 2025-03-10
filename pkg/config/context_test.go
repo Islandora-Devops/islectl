@@ -182,7 +182,7 @@ func TestCurrentContext(t *testing.T) {
 
 	// Change flag value to a non-existent context.
 	err = fs.Set("context", "nonexistent")
-	if err == nil {
+	if err != nil {
 		t.Fatalf("error setting context flag: %v", err)
 	}
 
