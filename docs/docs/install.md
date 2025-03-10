@@ -112,7 +112,7 @@ islectl create config dev \
 
 That creates a context for an ISLE site that has its `docker-compose.yml` at `/Users/vivek/isle-site-template`. It's also set as your default context since the `--default` flag was passed.
 
-#### Create a remote context
+#### Configure a remote context
 
 For ISLE installs on remote servers, you can setup a remote context. An example command for that would be:
 
