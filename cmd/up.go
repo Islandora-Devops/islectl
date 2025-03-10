@@ -25,11 +25,13 @@ var upCmd = &cobra.Command{
 			utils.ExitOnError(err)
 		}
 
-		path := filepath.Join(context.ProjectDir, "docker-compose.yml")
-		_, err = os.Stat(path)
-		if err != nil {
-			slog.Error("Error checking for docker-compose.yml", "path", path, "err", err)
-			os.Exit(1)
+		if context.DockerHostType == config.ContextLocal {
+			path := filepath.Join(context.ProjectDir, "docker-compose.yml")
+			_, err = os.Stat(path)
+			if err != nil {
+				slog.Error("Error checking for docker-compose.yml", "path", path, "err", err)
+				os.Exit(1)
+			}
 		}
 
 		cmdArgs := []string{
