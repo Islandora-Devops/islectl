@@ -127,9 +127,8 @@ var loginCmd = &cobra.Command{
 			return err
 		}
 
-		len := len(output)
-		if len > 0 {
-			err := utils.OpenURL(output[len-1])
+		if strings.HasPrefix(output, "http") {
+			err := utils.OpenURL(output)
 			if err != nil {
 				slog.Warn("Error opening URL", "err", err)
 			}

@@ -10,7 +10,8 @@ Command line utility to interact with your local and remote ISLE installs.
 
 `islectl` provides many commands that all work the same whether you're running `islectl` from your laptop to interact with your local development environment, or if you're accessing a remote server that is running ISLE.
 
+If all of your ISLE contexts are remote, you do not even need docker installed on your local machine.
+
 ## Learn more
 
 You can learn more about installing `islectl` and the commands the tool provides in the [Getting started](./install/) and [Commands](./commands/) sections.
-
