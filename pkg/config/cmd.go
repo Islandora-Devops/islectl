@@ -8,9 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
-	"syscall"
 
 	"github.com/kballard/go-shellquote"
 	"golang.org/x/crypto/ssh"
@@ -85,6 +83,8 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 		return "", fmt.Errorf("error requesting pseudo terminal: %w", err)
 	}
 
+	// set terminal to raw for easier stdin/out/err handling
+	// between the os and ssh session
 	if term.IsTerminal(int(os.Stdin.Fd())) {
 		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 		if err != nil {
@@ -97,6 +97,7 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 		}()
 	}
 
+	// setup some stdout/err pipes so we can capture output
 	session.Stdin = os.Stdin
 	stdoutPipe, err := session.StdoutPipe()
 	if err != nil {
@@ -108,31 +109,12 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 	}
 	combined := io.MultiReader(stdoutPipe, stderrPipe)
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
-	done := make(chan struct{})
-	go func() {
-		select {
-		case s := <-sigChan:
-			switch s {
-			case os.Interrupt:
-				session.Signal(ssh.SIGINT)
-			case syscall.SIGHUP:
-				session.Signal(ssh.SIGHUP)
-			case syscall.SIGTERM:
-				session.Signal(ssh.SIGTERM)
-			}
-		case <-done:
-			return
-		}
-	}()
-	defer signal.Stop(sigChan)
-	defer close(done)
-
+	// call ssh foo@host.tld "remoteCmd"
 	if err := session.Start(remoteCmd); err != nil {
 		return "", fmt.Errorf("error starting remote command %q: %v", remoteCmd, err)
 	}
 
+	// save the output from the command so we can return it
 	buf := make([]byte, 1024)
 	for {
 		n, err := combined.Read(buf)
