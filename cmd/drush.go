@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"slices"
 	"strings"
 
 	"github.com/islandora-devops/islectl/internal/utils"
@@ -35,6 +36,11 @@ e.g. islectl drush uli auto-opens the reset link in the default web browser.
 			return err
 		}
 
+		drush := "drush"
+		if !slices.Contains(filteredArgs, "--uri") && !slices.Contains(filteredArgs, "-l") {
+			drush = drush + " --uri $DRUPAL_DRUSH_URI"
+		}
+
 		f := cmd.Flags()
 		err = f.Set("context", isleContext)
 		if err != nil {
@@ -53,7 +59,7 @@ e.g. islectl drush uli auto-opens the reset link in the default web browser.
 			fmt.Sprintf("drupal-%s", context.Profile),
 			"bash",
 			"-c",
-			fmt.Sprintf("drush %s", shellquote.Join(filteredArgs...)),
+			fmt.Sprintf("%s %s", drush, shellquote.Join(filteredArgs...)),
 		}
 		c := exec.Command("docker", cmdArgs...)
 		c.Dir = context.ProjectDir
