@@ -142,6 +142,7 @@ func (d *DockerClient) GetContainerName(c *config.Context, service string, never
 	// Print the container names.
 	for _, container := range containers {
 		for _, name := range container.Names {
+			slog.Debug("Got container", "name", name)
 			return name, nil
 		}
 	}
