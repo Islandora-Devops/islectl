@@ -15,13 +15,14 @@ Documentation is available at https://islandora-devops.github.io/islectl/
 ## TODO
 
 - [x] Implement `make up` Brings up the containers or builds starter if no containers were found.
-  - Now `islectl up` for existing sites. Use `islectl create-site` to create a new site
+  - Now `islectl compose up` for existing sites. Use `islectl create context` to create a new site
 - [ ] Implement `make starter` Make a local site with codebase directory bind mounted, using starter site unless other package specified in .env or present already.
 - [ ] Implement `starter_dev` Make a local site with codebase directory bind mounted, using cloned starter site.
 - [x] Implement `make pull` Fetches the latest images from the registry.
 - [x] Implement `make build` Create Dockerfile from example if it does not exist.
 - [ ] Implement `make push-image` Push your custom drupal image to dockerhub or a container registry
 - [x] Implement `make down` Brings down the containers. Same as docker compose down --remove-orphans
+  - Now `islectl compose down`
 - [ ] Implement `make env` Pull in changes to the .env file.
 - [ ] Implement `make set_admin_password` Sets the Drupal admin password and accomodates for permissions restrictions to the secrets directory. Only runs sudo when needed.
 - [ ] Implement `make clean` Destroys everything beware!
