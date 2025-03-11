@@ -209,9 +209,9 @@ func (c *Context) DialSSH() (*ssh.Client, error) {
 	}
 
 	sshAddr := fmt.Sprintf("%s:%d", c.SSHHostname, c.SSHPort)
+	slog.Debug("Dialing " + sshAddr)
 	client, err := ssh.Dial("tcp", sshAddr, sshConfig)
 	if err != nil {
-
 		var keyErr *knownhosts.KeyError
 		if errors.As(err, &keyErr) {
 			if len(keyErr.Want) == 0 {
