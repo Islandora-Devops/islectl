@@ -87,7 +87,11 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to set terminal to raw mode: %v", err)
 	}
-	defer term.Restore(int(os.Stdin.Fd()), oldState)
+	defer func() {
+		if err := term.Restore(int(os.Stdin.Fd()), oldState); err != nil {
+			slog.Error("Unable to return terminal to orignal state.", "err", err)
+		}
+	}()
 
 	session.Stdin = os.Stdin
 	stdoutPipe, err := session.StdoutPipe()
