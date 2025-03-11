@@ -16,7 +16,7 @@ import (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage ISLE command configuration",
+	Short: "Manage islectl command configuration",
 	Long: `
 An islectl config can have multiple contexts.
 

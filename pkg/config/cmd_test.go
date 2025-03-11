@@ -15,7 +15,7 @@ func TestRunCommandLocal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(output) == 0 || !strings.Contains(output[0], "hello") {
+	if len(output) == 0 || !strings.Contains(output, "hello") {
 		t.Fatalf("expected output to contain 'hello', got %v", output)
 	}
 }

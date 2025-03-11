@@ -12,22 +12,18 @@ Usage:
   islectl [command]
 
 Available Commands:
-  build        Build the Drupal container.
   completion   Generate the autocompletion script for the specified shell
-  config       Manage ISLE command configuration
+  compose      Run docker compose commands on ISLE contexts
+  config       Manage islectl command configuration
   create       Create ISLE resources
-  down         Run docker compose down
   drush        Run drush commands on ISLE contexts
-  exec         exec into compose services running in ISLE contexts
   help         Help about any command
   make         Run custom make commands
   port-forward Forward one or more local ports to a service
-  pull         Fetches the latest images from the registry.
   sequelace    Connect to your ISLE database using Sequel Ace (Mac OS only)
-  up           Brings up the containers
 
 Flags:
-      --context string     The ISLE context to use. See islectl config --help for more info (default "dev")
+      --context string     The ISLE context to use. See islectl config --help for more info (default "local")
   -h, --help               help for islectl
       --log-level string   The logging level for the command (default "INFO")
   -v, --version            version for islectl

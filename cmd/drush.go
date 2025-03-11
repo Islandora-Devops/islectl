@@ -21,38 +21,18 @@ var drushCmd = &cobra.Command{
 	Args:               cobra.ArbitraryArgs,
 	Short:              "Run drush commands on ISLE contexts",
 	Long: `
-Short hand for "islectl exec drupal drush".
+Short hand for "islectl compose exec drupal drush".
 
-This allows us to easily add additional features around common drush commands
+This allows us to easily add additional features around common drush commands.
+
+e.g. islectl drush uli auto-opens the reset link in the default web browser.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// since we're disabling flag parsing to make easy passing of flags to drush
+		// since we're disabling flag parsing to make easy passing of flags to docker compose
 		// handle the context flag
-		isleContext, err := cmd.Root().PersistentFlags().GetString("context")
+		filteredArgs, isleContext, err := utils.GetContextFromArgs(cmd, args)
 		if err != nil {
 			return err
-		}
-
-		// remove --context flag from the args if it exits
-		// and set it as the default context if it does
-		filteredArgs := []string{}
-		skipNext := false
-		for _, arg := range args {
-			if arg == "--context" {
-				skipNext = true
-				continue
-			}
-			if strings.HasPrefix(arg, "--context=") {
-				components := strings.Split(arg, "=")
-				isleContext = components[1]
-				continue
-			}
-			if skipNext {
-				isleContext = arg
-				skipNext = false
-				continue
-			}
-			filteredArgs = append(filteredArgs, arg)
 		}
 
 		f := cmd.Flags()
@@ -127,9 +107,8 @@ var loginCmd = &cobra.Command{
 			return err
 		}
 
-		len := len(output)
-		if len > 0 {
-			err := utils.OpenURL(output[len-1])
+		if strings.HasPrefix(output, "http") {
+			err := utils.OpenURL(output)
 			if err != nil {
 				slog.Warn("Error opening URL", "err", err)
 			}
