@@ -109,6 +109,15 @@ var composeCmd = &cobra.Command{
 			}
 		}
 
+		// consider adding a flag to not do this
+		// but this seems like a nice default for ISLE projects
+		if filteredArgs[0] == "up" && !slices.Contains(filteredArgs, "-d") && !slices.Contains(filteredArgs, "--detach") {
+			filteredArgs = append(filteredArgs, "-d", "--remove-orphans")
+		}
+		if filteredArgs[0] == "build" && !slices.Contains(filteredArgs, "--pull") {
+			filteredArgs = append(filteredArgs, "--pull")
+		}
+
 		cmdArgs := []string{
 			"compose",
 			"--profile",
