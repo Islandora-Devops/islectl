@@ -83,6 +83,8 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 		return "", fmt.Errorf("error requesting pseudo terminal: %w", err)
 	}
 
+	// set terminal to raw for easier stdin/out/err handling
+	// between the os and ssh session
 	if term.IsTerminal(int(os.Stdin.Fd())) {
 		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 		if err != nil {
@@ -95,6 +97,7 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 		}()
 	}
 
+	// setup some stdout/err pipes so we can capture output
 	session.Stdin = os.Stdin
 	stdoutPipe, err := session.StdoutPipe()
 	if err != nil {
@@ -106,10 +109,12 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 	}
 	combined := io.MultiReader(stdoutPipe, stderrPipe)
 
+	// call ssh foo@host.tld "remoteCmd"
 	if err := session.Start(remoteCmd); err != nil {
 		return "", fmt.Errorf("error starting remote command %q: %v", remoteCmd, err)
 	}
 
+	// save the output from the command so we can return it
 	buf := make([]byte, 1024)
 	for {
 		n, err := combined.Read(buf)
@@ -128,6 +133,10 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 	}
 
 	if err = session.Wait(); err != nil {
+		// do not mark error on sigint
+		if exitErr, ok := err.(*ssh.ExitError); ok && exitErr.ExitStatus() == 130 {
+			return output, nil
+		}
 		return "", fmt.Errorf("error waiting for remote command %q: %v", remoteCmd, err)
 	}
 
