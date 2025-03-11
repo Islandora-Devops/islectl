@@ -62,7 +62,7 @@ Be sure to run Ctrl+c in your terminal when you are done to close the connection
 
 		listeners := make([]net.Listener, 0, len(args))
 		done := make(chan os.Signal, 1)
-		signal.Notify(done, os.Interrupt, syscall.SIGTERM)
+		signal.Notify(done, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
