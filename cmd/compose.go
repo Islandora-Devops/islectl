@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/islandora-devops/islectl/internal/utils"
 	"github.com/islandora-devops/islectl/pkg/config"
@@ -22,35 +21,12 @@ var composeCmd = &cobra.Command{
 	Args:               cobra.ArbitraryArgs,
 	Short:              "Run docker compose commands on ISLE contexts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// since we're disabling flag parsing to make easy passing of flags to drush
+		// since we're disabling flag parsing to make easy passing of flags to docker compose
 		// handle the context flag
-		isleContext, err := cmd.Root().PersistentFlags().GetString("context")
+		filteredArgs, isleContext, err := utils.GetContextFromArgs(cmd, args)
 		if err != nil {
 			return err
 		}
-
-		// remove --context flag from the args if it exists
-		// and set it as the default context if it does
-		filteredArgs := []string{}
-		skipNext := false
-		for _, arg := range args {
-			if arg == "--context" {
-				skipNext = true
-				continue
-			}
-			if strings.HasPrefix(arg, "--context=") {
-				components := strings.Split(arg, "=")
-				isleContext = components[1]
-				continue
-			}
-			if skipNext {
-				isleContext = arg
-				skipNext = false
-				continue
-			}
-			filteredArgs = append(filteredArgs, arg)
-		}
-		isleContext = strings.Trim(isleContext, `"`)
 
 		validCommands := []string{
 			"attach",

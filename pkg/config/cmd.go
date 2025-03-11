@@ -90,7 +90,7 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 		}
 		defer func() {
 			if err := term.Restore(int(os.Stdin.Fd()), oldState); err != nil {
-				slog.Error("Unable to return terminal to orignal state.", "err", err)
+				slog.Error("Unable to return terminal to original state.", "err", err)
 			}
 		}()
 	}
