@@ -83,15 +83,17 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 		return "", fmt.Errorf("error requesting pseudo terminal: %w", err)
 	}
 
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		return "", fmt.Errorf("failed to set terminal to raw mode: %v", err)
-	}
-	defer func() {
-		if err := term.Restore(int(os.Stdin.Fd()), oldState); err != nil {
-			slog.Error("Unable to return terminal to orignal state.", "err", err)
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			return "", fmt.Errorf("failed to set terminal to raw mode: %v", err)
 		}
-	}()
+		defer func() {
+			if err := term.Restore(int(os.Stdin.Fd()), oldState); err != nil {
+				slog.Error("Unable to return terminal to orignal state.", "err", err)
+			}
+		}()
+	}
 
 	session.Stdin = os.Stdin
 	stdoutPipe, err := session.StdoutPipe()
