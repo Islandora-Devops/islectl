@@ -21,9 +21,11 @@ var drushCmd = &cobra.Command{
 	Args:               cobra.ArbitraryArgs,
 	Short:              "Run drush commands on ISLE contexts",
 	Long: `
-Short hand for "islectl exec drupal drush".
+Short hand for "islectl compose exec drupal drush".
 
-This allows us to easily add additional features around common drush commands
+This allows us to easily add additional features around common drush commands.
+
+e.g. islectl drush uli auto-opens the reset link in the default web browser.
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// since we're disabling flag parsing to make easy passing of flags to drush
