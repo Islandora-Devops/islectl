@@ -51,9 +51,9 @@ $ islectl port-forward \
 
 Then, while leaving the terminal open, in your web browser you can vist
 
-http://localhost:8983/solr to see the solr admin UI
-http://localhost:8080/dashboard to see the traefik dashboard (assumming it's enabled in your config)
-http://localhost:8161/admin/queues.jsp to see ActiveMQ queues
+- http://localhost:8983/solr to see the solr admin UI
+- http://localhost:8080/dashboard to see the traefik dashboard (assumming it's enabled in your config)
+- http://localhost:8161/admin/queues.jsp to see ActiveMQ queues
 
 Be sure to run `Ctrl+c` in your terminal when you are done to close the connection.
 
