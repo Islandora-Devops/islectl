@@ -8,7 +8,9 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/kballard/go-shellquote"
 	"golang.org/x/crypto/ssh"
@@ -106,6 +108,27 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 	}
 	combined := io.MultiReader(stdoutPipe, stderrPipe)
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
+	done := make(chan struct{})
+	go func() {
+		select {
+		case s := <-sigChan:
+			switch s {
+			case os.Interrupt:
+				session.Signal(ssh.SIGINT)
+			case syscall.SIGHUP:
+				session.Signal(ssh.SIGHUP)
+			case syscall.SIGTERM:
+				session.Signal(ssh.SIGTERM)
+			}
+		case <-done:
+			return
+		}
+	}()
+	defer signal.Stop(sigChan)
+	defer close(done)
+
 	if err := session.Start(remoteCmd); err != nil {
 		return "", fmt.Errorf("error starting remote command %q: %v", remoteCmd, err)
 	}
@@ -128,6 +151,10 @@ func (c *Context) RunCommand(cmd *exec.Cmd) (string, error) {
 	}
 
 	if err = session.Wait(); err != nil {
+		// do not mark error on sigint
+		if exitErr, ok := err.(*ssh.ExitError); ok && exitErr.ExitStatus() == 130 {
+			return output, nil
+		}
 		return "", fmt.Errorf("error waiting for remote command %q: %v", remoteCmd, err)
 	}
 
