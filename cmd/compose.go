@@ -67,12 +67,8 @@ var composeCmd = &cobra.Command{
 		if len(filteredArgs) == 0 || !slices.Contains(validCommands, filteredArgs[0]) {
 			utils.ExitOnError(fmt.Errorf("unknown docker compose command: %s", filteredArgs[0]))
 		}
-		f := cmd.Flags()
-		err = f.Set("context", isleContext)
-		if err != nil {
-			return err
-		}
-		context, err := config.CurrentContext(f)
+
+		context, err := config.GetContext(isleContext)
 		if err != nil {
 			return err
 		}
@@ -98,6 +94,10 @@ var composeCmd = &cobra.Command{
 			"compose",
 			"--profile",
 			context.Profile,
+		}
+
+		for _, env := range context.EnvFile {
+			cmdArgs = append(cmdArgs, "--env-file", env)
 		}
 
 		cmdArgs = append(cmdArgs, filteredArgs...)

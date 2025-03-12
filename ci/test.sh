@@ -26,7 +26,7 @@ ssh-keyscan -p 1234 localhost > ./ci/ssh/known_hosts
 
 ./islectl create context foo \
   --type remote \
-  --profile dev \
+  --profile prod \
   --project-dir /home/foo/isle \
   --project-name isle \
   --ssh-hostname localhost \
@@ -35,12 +35,10 @@ ssh-keyscan -p 1234 localhost > ./ci/ssh/known_hosts
   --ssh-key $(pwd)/ci/ssh/id_rsa \
   --yes
 
-# ./islectl compose pull --context foo
-# ^ seems like overkill here
-# as that'll have GHA pull all of isle-buildkit to test
-# if we run a context command that doesn't error out that should be enough of a test
-# that will SSH into the remote context and run the given command
-
 ./islectl compose build --context foo
+if [ "$GITHUB_ACTIONS" = "false" ]; then
+  ./islectl compose pull --context foo
+  ./islectl compose up
+fi
 
 docker compose --file ./ci/docker-compose.yml down

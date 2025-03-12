@@ -41,12 +41,7 @@ e.g. islectl drush uli auto-opens the reset link in the default web browser.
 			drush = drush + " --uri $DRUPAL_DRUSH_URI"
 		}
 
-		f := cmd.Flags()
-		err = f.Set("context", isleContext)
-		if err != nil {
-			return err
-		}
-		context, err := config.CurrentContext(f)
+		context, err := config.GetContext(isleContext)
 		if err != nil {
 			return err
 		}
