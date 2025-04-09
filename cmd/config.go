@@ -120,15 +120,16 @@ var setContextCmd = &cobra.Command{
 		}
 
 		// override local defaults for remote environments
-		if cc.DockerHostType == config.ContextRemote {
+		switch cc.DockerHostType {
+		case config.ContextRemote:
 			err = cc.VerifyRemoteInput(true)
 			if err != nil {
 				return err
 			}
-		} else if cc.DockerHostType == config.ContextLocal {
+		case config.ContextLocal:
 			cc.SSHKeyPath = ""
 			cc.DockerSocket = config.GetDefaultLocalDockerSocket(cc.DockerSocket)
-		} else {
+		default:
 			slog.Error("Unknown context type", "type", cc.DockerHostType)
 			os.Exit(1)
 		}
