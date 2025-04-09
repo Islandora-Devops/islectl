@@ -43,7 +43,8 @@ func GetUris(c *config.Context) (string, string, error) {
 
 	mysqlUri := fmt.Sprintf("mysql://%s:%s@", envs["DB_ROOT_USER"], envs["DB_ROOT_PASSWORD"])
 	sshUri := fmt.Sprintf("ssh_host=%s&ssh_port=%d&ssh_user=%s", c.SSHHostname, c.SSHPort, c.SSHUser)
-	if c.DockerHostType == config.ContextLocal {
+	switch c.DockerHostType {
+	case config.ContextLocal:
 		containerName, err := cli.GetContainerName(c, "ide", true)
 		if err != nil {
 			return "", "", err
@@ -55,7 +56,7 @@ func GetUris(c *config.Context) (string, string, error) {
 		// for local contexts, we'll SSH into codeserver and use docker internal DNS to access mariadb
 		mysqlUri = mysqlUri + fmt.Sprintf("%s:%s/%s", envs["DB_MYSQL_HOST"], envs["DB_MYSQL_PORT"], fmt.Sprintf("drupal_%s", c.Site))
 		sshUri = sshUri + fmt.Sprintf("&ssh_password=%s", idePass)
-	} else if c.DockerHostType == config.ContextRemote {
+	case config.ContextRemote:
 		// on remote hosts we need to get the IP address
 		// mariadb is exposed at in the network namespace
 		serviceIp, err := cli.GetServiceIp(ctx, c, containerName)
