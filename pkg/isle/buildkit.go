@@ -142,7 +142,7 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 }
 
 func downloadSetup() string {
-	url := "https://raw.githubusercontent.com/Islandora-Devops/isle-site-template/6540ec3f418cc345763b17ec76e86e16e1c8e5c3/setup.sh"
+	url := "https://raw.githubusercontent.com/Islandora-Devops/isle-site-template/3cb2a6a76f0ad57f6f5fbfe65d524b35ae3b0fd0/setup.sh"
 	resp, err := http.Get(url)
 	if err != nil {
 		slog.Error("failed to download install script", "err", err)
