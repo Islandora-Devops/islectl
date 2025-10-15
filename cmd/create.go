@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/islandora-devops/islectl/pkg/compose"
 	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/islandora-devops/islectl/pkg/isle"
 	"github.com/spf13/cobra"
@@ -169,9 +170,10 @@ Examples:
     --yes
 
 Flags:
-  --yes              Skip confirmation prompts (useful for automation)
-  --buildkit-tag     ISLE buildkit tag/branch to use (default: main)
-  --starter-site     Starter site branch to use (default: main)`,
+  --yes                  Skip confirmation prompts (useful for automation)
+  --buildkit-tag         ISLE buildkit tag/branch to use (default: main)
+  --starter-site         Starter site branch to use (default: main)
+  --disable-service      Disable service(s) after installation (can be repeated)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cn := args[0]
 		cc, err := config.GetContext(cn)
@@ -248,13 +250,58 @@ Flags:
 			return err
 		}
 
+		disableServices, err := cmd.Flags().GetStringSlice("disable-service")
+		if err != nil {
+			return err
+		}
+
+		// If not using --yes flag and no --disable-service flags provided, ask about optional services
+		if !trustFlags && len(disableServices) == 0 {
+			optionalServices := compose.GetOptionalServices()
+			if len(optionalServices) > 0 {
+				fmt.Println("\nOptional services:")
+				for _, svc := range optionalServices {
+					defaultStr := "Y/n"
+					if !svc.DefaultEnabled {
+						defaultStr = "y/N"
+					}
+
+					response, err := config.GetInput(fmt.Sprintf("  Include %s? (%s) [%s]: ", svc.ServiceName, svc.Description, defaultStr))
+					if err != nil {
+						return err
+					}
+
+					response = strings.TrimSpace(strings.ToLower(response))
+
+					// Determine if we should disable this service
+					shouldDisable := false
+					switch response {
+					case "":
+						// User pressed enter, use default
+						shouldDisable = !svc.DefaultEnabled
+					case "n", "no":
+						shouldDisable = true
+					case "y", "yes":
+						shouldDisable = false
+					default:
+						fmt.Printf("Invalid response '%s', using default\n", response)
+						shouldDisable = !svc.DefaultEnabled
+					}
+
+					if shouldDisable {
+						disableServices = append(disableServices, svc.ServiceName)
+					}
+				}
+			}
+		}
+
 		defaultContext, err := f.GetBool("default")
 		if err != nil {
 			fmt.Printf("Error reading default flag: %v\n", err)
 			return err
 		}
 
-		err = isle.Setup(context, defaultContext, trustFlags, bt, ss)
+		err = isle.Setup(context, defaultContext, trustFlags, bt, ss, disableServices)
 		if err != nil {
 			return err
 		}
@@ -270,6 +317,7 @@ func init() {
 	flags.Bool("yes", false, "Skip asking questions and just do the thing")
 	flags.String("buildkit-tag", "main", "isle-buildkit tag to install")
 	flags.String("starter-site", "main", "starter-site to install")
+	flags.StringSlice("disable-service", []string{}, "Service(s) to disable after installation (e.g., --disable-service=blazegraph)")
 	flags.Bool("default", false, "set to default context")
 
 	createCmd.AddCommand(createContextCmd)

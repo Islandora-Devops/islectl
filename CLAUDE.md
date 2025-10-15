@@ -4,6 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 📚 Critical Documentation References
 - **Go Conventions**: `./docs/GO_CONVENTIONS.md`
+- **Service Management Architecture**: `./docs/SERVICE_MANAGEMENT.md` - Service customization system
 - **Project Documentation**: https://islandora-devops.github.io/islectl/
 - **User Documentation** (mkdocs):
   - `./docs/docs/index.md` - Overview and features
@@ -54,6 +55,7 @@ The core concept is **contexts** - configurations for ISLE installations that ca
 - `pkg/config/config.go` - Config file I/O, loading, and saving
 - `pkg/config/context.go` - Context struct and operations (SSH dialing, file reading, remote verification)
 - `pkg/config/cmd.go` - Flag parsing and context loading from command flags
+- `pkg/compose/compose.go` - Docker compose YAML manipulation for service management
 
 **Critical pattern**: Almost every command needs to get the current context:
 ```go
@@ -66,6 +68,7 @@ All commands are in `cmd/`:
 - `cmd/root.go` - Root command with global flags (`--context`, `--log-level`)
 - `cmd/config.go` - Context management (set-context, use-context, get-contexts, delete-context, etc.)
 - `cmd/create.go` - Create new ISLE sites or configs for existing sites
+- `cmd/service.go` - Service management (list, disable, enable services in docker-compose.yml)
 - `cmd/compose.go` - Wrapper for docker-compose commands with context awareness
 - `cmd/drush.go` - Drush command wrapper with automatic URI handling
 - `cmd/drupal/` - Drupal-specific subcommands:
@@ -192,6 +195,24 @@ Always use the Context method to abstract local vs remote:
 ```go
 content := context.ReadSmallFile("/path/to/file")
 ```
+
+### Working with docker-compose.yml
+
+Use the `ServiceManager` from `pkg/compose` to manipulate docker-compose files:
+```go
+sm := compose.NewServiceManager(context)
+
+// List all services
+services, err := sm.ListServices()
+
+// Check if service exists
+exists, err := sm.ServiceExists("blazegraph")
+
+// Disable a service
+err := sm.DisableService("blazegraph")
+```
+
+See `docs/SERVICE_MANAGEMENT.md` for detailed architecture and usage patterns.
 
 ### Testing
 
