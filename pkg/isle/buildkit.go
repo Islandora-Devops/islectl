@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/islandora-devops/islectl/pkg/compose"
 	"github.com/islandora-devops/islectl/pkg/config"
 )
 
@@ -73,7 +74,7 @@ func GetUris(c *config.Context) (string, string, error) {
 	return mysqlUri, sshUri, nil
 }
 
-func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss string) error {
+func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss string, disableServices []string) error {
 	contextStr, err := context.String()
 	if err != nil {
 		return err
@@ -89,6 +90,13 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 	}
 	for _, f := range flags {
 		fmt.Println(f)
+	}
+
+	if len(disableServices) > 0 {
+		fmt.Println("\nServices to be disabled after installation:")
+		for _, svc := range disableServices {
+			fmt.Printf("  - %s\n", svc)
+		}
 	}
 	if !confirmed {
 		fmt.Printf("\nAre you sure you want to proceed creating the site? y/N: ")
@@ -137,6 +145,22 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 		os.Exit(1)
 	}
 	fmt.Println("Site created!")
+
+	// Disable services if requested
+	if len(disableServices) > 0 {
+		fmt.Println("\nDisabling services...")
+		sm := compose.NewServiceManager(context)
+
+		for _, serviceName := range disableServices {
+			slog.Info("Disabling service", "service", serviceName)
+			if err := sm.DisableService(serviceName); err != nil {
+				slog.Warn("Failed to disable service", "service", serviceName, "err", err)
+				fmt.Printf("Warning: Failed to disable service '%s': %v\n", serviceName, err)
+			} else {
+				fmt.Printf("✓ Service '%s' disabled\n", serviceName)
+			}
+		}
+	}
 
 	return nil
 }
