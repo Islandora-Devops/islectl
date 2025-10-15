@@ -14,7 +14,15 @@ import (
 
 var backupCmd = &cobra.Command{
 	Use:   "backup",
-	Short: "backup drupal stateful files",
+	Short: "Backup Drupal database",
+	Long: `Create a backup of the Drupal database.
+
+This creates a gzipped SQL dump of the database to /tmp/db.tar.gz in the container.
+Cache tables are excluded from the dump for efficiency, but their structure is preserved.
+
+Example:
+  islectl drupal backup              # Backup database to /tmp/db.tar.gz
+  islectl drupal backup --context prod  # Backup production database`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		f := cmd.Flags()
 		context, err := config.CurrentContext(f)

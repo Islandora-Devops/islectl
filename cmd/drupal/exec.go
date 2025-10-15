@@ -16,10 +16,20 @@ import (
 )
 
 var execCmd = &cobra.Command{
-	Use:                "exec COMMAND",
+	Use:                "exec [COMMAND]",
 	DisableFlagParsing: true,
 	Args:               cobra.ArbitraryArgs,
-	Short:              "Run docker compose commands on ISLE contexts",
+	Short:              "Execute commands in the Drupal container",
+	Long: `Execute arbitrary commands in the Drupal container.
+
+If no command is provided, opens an interactive bash shell in the container.
+This is useful for debugging, running composer commands, or performing file operations.
+
+Examples:
+  islectl drupal exec                              # Open interactive bash shell
+  islectl drupal exec ls -la /var/www/drupal/web   # List files
+  islectl drupal exec composer require drupal/devel # Install a module
+  islectl drupal exec "drush cr && drush status"   # Run multiple commands`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// since we're disabling flag parsing to make easy passing of flags to docker compose
 		// handle the context flag

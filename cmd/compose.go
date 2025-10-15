@@ -20,6 +20,22 @@ var composeCmd = &cobra.Command{
 	DisableFlagParsing: true,
 	Args:               cobra.ArbitraryArgs,
 	Short:              "Run docker compose commands on ISLE contexts",
+	Long: `Run docker compose commands on ISLE contexts.
+
+This command wraps docker compose and automatically applies the correct profile and project directory
+based on the current context. All docker compose commands and flags are supported.
+
+Automatic behaviors:
+  - 'compose up' automatically adds '-d --remove-orphans' if not already specified
+  - 'compose build' automatically adds '--pull' if not already specified
+
+Examples:
+  islectl compose up                    # Start containers in detached mode
+  islectl compose down                  # Stop and remove containers
+  islectl compose logs -f drupal        # Follow drupal container logs
+  islectl compose ps                    # List running containers
+  islectl compose exec drupal bash      # Open shell in drupal container
+  islectl compose --context prod up     # Start containers on prod context`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// since we're disabling flag parsing to make easy passing of flags to docker compose
 		// handle the context flag

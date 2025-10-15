@@ -17,17 +17,27 @@ import (
 )
 
 var drushCmd = &cobra.Command{
-	Use:                "drush",
+	Use:                "drush [COMMAND]",
 	DisableFlagParsing: true,
 	Args:               cobra.ArbitraryArgs,
 	Short:              "Run drush commands on ISLE contexts",
-	Long: `
-Short hand for "islectl compose exec drupal drush".
+	Long: `Run drush commands on ISLE contexts.
 
-This allows us to easily add additional features around common drush commands.
+This is a shorthand for "islectl compose exec drupal drush" with automatic --uri handling.
+The DRUPAL_DRUSH_URI environment variable is automatically passed unless you specify --uri or -l.
 
-e.g. islectl drush uli auto-opens the reset link in the default web browser.
-`,
+Special subcommands:
+  uli - Generate and auto-open a one-time login link in your browser
+
+Examples:
+  islectl drush status                      # Check Drupal status
+  islectl drush cr                          # Clear all caches
+  islectl drush cex                         # Export configuration
+  islectl drush cim                         # Import configuration
+  islectl drush uli                         # Generate login link and open in browser
+  islectl drush uli --uid=2                 # Login link for user ID 2
+  islectl drush sqlq "SHOW TABLES"          # Run SQL query
+  islectl drush --context prod status       # Check status on prod context`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// since we're disabling flag parsing to make easy passing of flags to docker compose
 		// handle the context flag
@@ -68,7 +78,15 @@ e.g. islectl drush uli auto-opens the reset link in the default web browser.
 // login runs drush uli
 var loginCmd = &cobra.Command{
 	Use:   "uli",
-	Short: `Runs "drush uli" to provide a direct login link`,
+	Short: "Generate a one-time login link",
+	Long: `Generate a one-time login link and automatically open it in your default browser.
+
+This runs 'drush uli' in the Drupal container and opens the resulting URL.
+
+Examples:
+  islectl drush uli              # Login as admin (user 1)
+  islectl drush uli --uid=2      # Login as user ID 2
+  islectl drush uli --uri=https://example.com  # Use specific URI`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		f := cmd.Flags()
 		context, err := config.CurrentContext(f)

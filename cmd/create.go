@@ -17,13 +17,38 @@ import (
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create ISLE resources",
+	Long: `Create ISLE sites and contexts.
+
+Use 'create context' to install a new ISLE site from scratch.
+Use 'create config' to add an islectl context for an existing ISLE site.`,
 }
 
 // createConfigCmd creates islectl config for existing isle-site-template installs
 var createConfigCmd = &cobra.Command{
 	Use:   "config [context-name]",
 	Args:  cobra.ExactArgs(1),
-	Short: "Create an islectl config for existing ISLE installs.",
+	Short: "Create an islectl config for existing ISLE installs",
+	Long: `Create an islectl context for an existing ISLE installation.
+
+This command registers an existing ISLE site with islectl so you can manage it.
+It does NOT create a new ISLE site - use 'create context' for that.
+
+The command will interactively prompt for:
+  - Whether the site is local or remote
+  - Project directory path
+  - Remote SSH connection details (if applicable)
+
+Examples:
+  # Create config for a local ISLE site
+  islectl create config dev --type local --project-dir /home/user/isle
+
+  # Create config for a remote ISLE site
+  islectl create config prod \
+    --type remote \
+    --project-dir /opt/isle \
+    --ssh-hostname isle.example.com \
+    --ssh-user deploy \
+    --ssh-key ~/.ssh/id_rsa`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cc, err := config.GetContext(args[0])
 		if err != nil {
@@ -114,7 +139,39 @@ var createConfigCmd = &cobra.Command{
 var createContextCmd = &cobra.Command{
 	Use:   "context [context-name]",
 	Args:  cobra.ExactArgs(1),
-	Short: "Create an ISLE site and islectl context.",
+	Short: "Create an ISLE site and islectl context",
+	Long: `Create a new ISLE site from scratch and register it as an islectl context.
+
+This command:
+  1. Downloads the latest ISLE site template setup script
+  2. Runs the installation (locally or remotely via SSH)
+  3. Creates an islectl context to manage the new site
+
+The installation will create a complete ISLE environment with Drupal and all required services.
+
+Examples:
+  # Create a local development site
+  islectl create context dev \
+    --type local \
+    --profile dev \
+    --project-dir /home/user/my-isle-site \
+    --project-name my-site
+
+  # Create a remote production site
+  islectl create context prod \
+    --type remote \
+    --profile prod \
+    --project-dir /opt/isle \
+    --project-name my-institution \
+    --ssh-hostname isle.example.com \
+    --ssh-user deploy \
+    --ssh-key ~/.ssh/id_rsa \
+    --yes
+
+Flags:
+  --yes              Skip confirmation prompts (useful for automation)
+  --buildkit-tag     ISLE buildkit tag/branch to use (default: main)
+  --starter-site     Starter site branch to use (default: main)`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cn := args[0]
 		cc, err := config.GetContext(cn)
