@@ -83,7 +83,7 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 
 	fmt.Println("\nAnd these buildkit/starter site flags")
 	flags := []string{
-		fmt.Sprintf("--buildkit-tag=%s", bt),
+		fmt.Sprintf("--isle-site-template-ref=%s", bt),
 		fmt.Sprintf("--starter-site-branch=%s", ss),
 		fmt.Sprintf("--site-name=%s", context.ProjectName),
 	}
@@ -142,7 +142,7 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 }
 
 func downloadSetup() string {
-	url := "https://raw.githubusercontent.com/Islandora-Devops/isle-site-template/76ccdbc95919b63b2536f25441fc901aa1d71ba3/setup.sh"
+	url := "https://raw.githubusercontent.com/Islandora-Devops/isle-site-template/ec59a822b6bae70ef64a5baa99e0cb419607b653/setup.sh"
 	resp, err := http.Get(url)
 	if err != nil {
 		slog.Error("failed to download install script", "err", err)
