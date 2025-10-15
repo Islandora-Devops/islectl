@@ -83,7 +83,7 @@ func Setup(context *config.Context, defaultContext, confirmed bool, bt, ss strin
 
 	fmt.Println("\nAnd these buildkit/starter site flags")
 	flags := []string{
-		fmt.Sprintf("--buildkit-tag=%s", bt),
+		fmt.Sprintf("--isle-site-template-ref=%s", bt),
 		fmt.Sprintf("--starter-site-branch=%s", ss),
 		fmt.Sprintf("--site-name=%s", context.ProjectName),
 	}
