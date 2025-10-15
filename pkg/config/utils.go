@@ -48,6 +48,11 @@ func LoadFromFlags(f *pflag.FlagSet, context Context) (*Context, error) {
 		}
 		tag = strings.Split(tag, ",")[0]
 
+		// Skip map types as they're not supported as flags
+		if field.Type.Kind() == reflect.Map {
+			continue
+		}
+
 		// if we're loading flags for an existing context
 		// do not add default values
 		if exists && !f.Changed(tag) {

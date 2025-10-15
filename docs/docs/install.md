@@ -160,7 +160,7 @@ https://isle.myinstitution.edu/user/reset/1/1741453647/cdscdsc-YDMVL1_mdwkpamc2/
 The default context can also be switched back and forth for future `islectl` executions via
 
 ```
-islectl set-context stage
+islectl config use-context stage
 ```
 
 ## Updating islectl

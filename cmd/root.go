@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/islandora-devops/islectl/cmd/drupal"
 	"github.com/islandora-devops/islectl/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -65,4 +66,7 @@ func init() {
 	}
 	rootCmd.PersistentFlags().String("context", c, "The ISLE context to use. See islectl config --help for more info")
 	rootCmd.PersistentFlags().String("log-level", ll, "The logging level for the command")
+
+	// Add drupal subcommands
+	rootCmd.AddCommand(drupal.RootCmd)
 }

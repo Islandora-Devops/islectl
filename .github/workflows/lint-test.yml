@@ -8,42 +8,23 @@ jobs:
   lint-test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v7
+        uses: golangci/golangci-lint-action@4afd733a84b1f43292c63897423277bb7f4313a9 # v8
         with:
           version: latest
 
-      - name: Install dependencies
-        run: go get .
+      - name: lint
+        run: make lint
 
-      - name: Test with the Go CLI
-        run: go test -v ./...
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
-
-      - name: Docker Hub Login
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
-        with:
-          registry: ghcr.io
-          username: ${{github.actor}}
-          password: ${{secrets.GITHUB_TOKEN}}
-
-      - name: Build and push ghcr
-        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6
-        with:
-          context: ./ci
-          push: true
-          tags: ghcr.io/islandora-devops/islectl:ci
-          cache-from: type=registry,ref=ghcr.io/islandora-devops/islectl:ci-cache
-          cache-to: type=registry,ref=ghcr.io/islandora-devops/islectl:ci-cache,mode=max
+      - name: unit test
+        run: make test
 
       - name: Integration test
-        run: ./ci/test.sh
+        run: make integration-test

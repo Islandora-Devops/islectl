@@ -48,8 +48,6 @@ e.g. islectl drush uli auto-opens the reset link in the default web browser.
 
 		cmdArgs := []string{
 			"compose",
-			"--profile",
-			context.Profile,
 			"exec",
 			fmt.Sprintf("drupal-%s", context.Profile),
 			"bash",

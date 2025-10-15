@@ -16,6 +16,7 @@ Available Commands:
   compose      Run docker compose commands on ISLE contexts
   config       Manage islectl command configuration
   create       Create ISLE resources
+  drupal       Drupal command group
   drush        Run drush commands on ISLE contexts
   help         Help about any command
   make         Run custom make commands
@@ -32,6 +33,37 @@ Flags:
 Each command has a `--help` flag that provide what flags can be passed to the given command.
 
 Some of the commands are self-evident with the name of the command and the description in `--help`. For those that need some more information, you can find that below:
+
+### drupal
+
+Execute commands or perform operations in the Drupal container.
+
+#### drupal exec
+
+Execute arbitrary commands in the Drupal container. If no command is provided, it opens an interactive bash shell.
+
+```bash
+# Open an interactive bash shell in the drupal container
+islectl drupal exec
+
+# Run a specific command
+islectl drupal exec ls -la /var/www/drupal/web/sites
+
+# Run multiple commands
+islectl drupal exec "composer require drupal/devel && drush en devel -y"
+```
+
+This is useful for debugging, running composer commands, or performing file operations within the container.
+
+#### drupal backup
+
+Create a backup of the Drupal database.
+
+```bash
+islectl drupal backup
+```
+
+This creates a gzipped SQL dump of the database, excluding cache tables for efficiency while preserving their structure.
 
 ### port-forward
 
